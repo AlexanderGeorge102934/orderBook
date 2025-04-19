@@ -90,6 +90,8 @@ class Trade{
 
 
 };
+
+// Aliases/Nicknames
 using OrderPointer = std::shared_ptr<Order>;
 using OrderPointers = std::list<OrderPointer>;
 
@@ -104,13 +106,15 @@ class OrderBook{
 				OrderPointers::iterator location_;		
 		};
 
+		std::unordered_map<OrderId, OrderEntry> orderMap_;
+
 	public:
 
 		void matchOrder(const OrderId& orderId){
 			// Try to match the full order
 				// If market order then math with the best available bid/ask
 				// If market order cannot be fully filled FOK
-
+			
 			// Anything remaining insert into book (Only if limit order)	
 		
 		
@@ -132,7 +136,7 @@ class OrderBook{
 
 		}
 
-		const Price& GetBestBid() const { 	
+		const Price& getBestBid() const { 	
 			if(!bids_.empty()){ 
 				
 				auto iter = bids_.begin() ;
@@ -145,7 +149,7 @@ class OrderBook{
 	
 			throw std::runtime_error("No bids available");
 		}
-		const Price& GetBestAsk() const { 
+		const Price& getBestAsk() const { 
 			if(!asks_.empty()){
 				auto iter = asks_.begin();
 				auto& asks = iter->second;
@@ -157,6 +161,5 @@ class OrderBook{
 			}	
 				
 			throw std::runtime_error("No asks available");		
-		
 		}
-};
+};	
