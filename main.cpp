@@ -5,11 +5,10 @@
 #include <memory>
 #include <list>
 #include <format>
-
+#include <vector>
 enum class OrderType{
 	Market,
-	Limit
-};
+	Limit };
 
 enum class Side{
 	Buy,
@@ -94,6 +93,8 @@ class Trade{
 // Aliases/Nicknames
 using OrderPointer = std::shared_ptr<Order>;
 using OrderPointers = std::list<OrderPointer>;
+using Trades = std::vector<Trade>;
+
 
 class OrderBook{
 	private:
@@ -105,8 +106,6 @@ class OrderBook{
 				OrderPointer order_ { nullptr };
 				OrderPointers::iterator location_;		
 		};
-
-		std::unordered_map<OrderId, OrderEntry> orderMap_;
 
 	public:
 
@@ -135,28 +134,27 @@ class OrderBook{
 
 
 		}
-
+		
+		// Check to see if this can be inlined
 		const Price& getBestBid() const { 	
 			if(!bids_.empty()){ 
 				
-				auto iter = bids_.begin() ;
-				auto& bids = iter->second ;
-				auto& bid = bids.front(); 
-
-
-				return bid->getPrice();
+				const auto& bestBid = bids_.begin()->first;	
+				
+				
+				return bestBid;
 			}		
 	
 			throw std::runtime_error("No bids available");
 		}
+
+
+		//Check to see if this can be inlined 
 		const Price& getBestAsk() const { 
 			if(!asks_.empty()){
-				auto iter = asks_.begin();
-				auto& asks = iter->second;
-				auto& ask = asks.front();
+				const auto& bestAsk = asks_.begin()->first;
 
-				return ask->getPrice();
-
+				return bestAsk;
 
 			}	
 				
