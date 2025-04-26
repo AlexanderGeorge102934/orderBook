@@ -117,6 +117,11 @@ class OrderBook{
 			// First determine the side of the order 
 			Side incomingOrderSide = incomingOrder->getSide();
 			
+
+			// This is technically a FOK w pegged to best meaning it will only fill if the quantity of the best 
+			// price is available to fully fill meaning it will not look at the second, third or fourth best like how a 
+			// market order actually does it 
+			// This is for simplicity later updates might include a practical market order 
 			if(incomingOrderSide == Side::Buy){
 				// Try to match with the best sell 
 				if(incomingOrder->getOrderType() == OrderType::Market){
