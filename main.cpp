@@ -118,12 +118,14 @@ class OrderBook{
 			Side incomingOrderSide = incomingOrder->getSide();
 			
 
-			// This is technically a FOK w pegged to best meaning it will only fill if the quantity of the best 
-			// price is available to fully fill meaning it will not look at the second, third or fourth best like how a 
-			// market order actually does it 
-			// This is for simplicity later updates might include a practical market order 
 			if(incomingOrderSide == Side::Buy){
+
 				// Try to match with the best sell 
+
+				// This is technically a FOK w pegged to best meaning it will only fill if the quantity of the best 
+				// price is available to fully fill meaning it will not look at the second, third or fourth best like how a 
+				// market order actually does it 
+				// This is for simplicity later updates might include a practical market order 
 				if(incomingOrder->getOrderType() == OrderType::Market){
 					Quantity totalQuantity = 0;
 
@@ -134,7 +136,10 @@ class OrderBook{
 					if (totalQuantity < incomingOrder->getRemainingQuantity()) {
 					    return;
 					}
+
+					// Complete the order by matching here
 				}
+
 				// If order is unable to match with best sell then add to orderbook	
 				if(*getBestAsk() > incomingOrder->getPrice()){
 					// add order to order book 
@@ -143,7 +148,7 @@ class OrderBook{
 					auto& orderList = bids_[incomingOrder->getPrice()];
 					orderList.push_back(incomingOrder);
 
-					const auto& it = std::prev(orderList.end());	// Points to the actual last element and not the end cuz of prev
+					const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
 					
 					// Maybe might also need to lock the unordered_map due to hash collisions? Not sure I think I don't 
 					OrderEntry orderEntry;
@@ -156,16 +161,54 @@ class OrderBook{
 				}
 
 
+				// Do matching logic here 
+
+
 			}
 
 					
 			if(incomingOrderSide == Side::Sell){
 				
-				// If order is unable to match with best bid then add to orderbook
-				if(getBestBid() < incomingOrder->getPrice()){
-					// add order to order book
+				// Try to match with the best bid 
+				if(incomingOrder->getOrderType() == OrderType::Market){
+					Quantity totalQuantity = 0;
+
+					for (const auto& order : bids_.begin()->second) {
+					    totalQuantity += order->getRemainingQuantity();
+					}
+
+					if (totalQuantity < incomingOrder->getRemainingQuantity()) {	
+				    		return;
+					}
+
+					// Complete the order by matching here 
+				}
+
+				// If order is unable to match with best sell then add to orderbook	
+				if(*getBestBid() < incomingOrder->getPrice()){
+					// add order to order book 
+
+					// Gonna need to lock the map
+					auto& orderList = asks_[incomingOrder->getPrice()];
+					orderList.push_back(incomingOrder);
+
+					const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
+					
+					// Maybe might also need to lock the unordered_map due to hash collisions? Not sure I think I don't 
+					OrderEntry orderEntry;
+					orderEntry.order_ = incomingOrder;
+					orderEntry.location_ = it;	
+					
+					orders_[incomingOrder->getOrderId()] = orderEntry;
+					// Only need to lock once i need it i believe
 					return;
 				}
+
+				// Do matching logic here
+
+
+
+
 			}
 
 			// Then try to match with the best available offer on the other side i.e the first in the map
@@ -205,16 +248,11 @@ class OrderBook{
 		}
 		
 		// Check to see if this can be inlined
-		const Price& getBestBid() const { 	
+		const Price* getBestBid() const { 	
 			if(!bids_.empty()){ 
-				
-				const auto& bestBid = bids_.begin()->first;	
-				
-				
-				return bestBid;
+				return &bids_.begin()->first;
 			}		
-	
-			throw std::runtime_error("No bids available");
+			return nullptr;
 		}
 
 
