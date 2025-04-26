@@ -6,8 +6,11 @@
 #include <list>
 #include <format>
 #include <vector>
+#include <numeric>
+#include <stdexcept>
+
 enum class OrderType{
-	Market,
+	Market, // Technically this will be a FOK with pegged to best (You see if you can complete everything with only the best ask) for simplicity
 	Limit };
 
 enum class Side{
@@ -52,7 +55,7 @@ class Order{
 		bool isFilled() const { return getFilledQuantity() == 0; }
 		void Fill(const Quantity& quantity){
 			if(quantity > getRemainingQuantity()){
-				throw std::logic_error("Quantity cannot be filled for remaining quantity because quantity is larger than remaining");	
+				throw std::logic_error(std::format("Quantity to fill is larger than the remaining quantity for Order({})", getOrderId()));
 			}	
 			
 			remainingQuantity_ -= quantity;	
@@ -106,33 +109,94 @@ class OrderBook{
 				OrderPointer order_ { nullptr };
 				OrderPointers::iterator location_;		
 		};
-
+		std::unordered_map<OrderId, OrderEntry> orders_;
 	public:
+		
+		void matchOrder(const OrderPointer& incomingOrder){
 
-		void matchOrder(const OrderId& orderId){
+			// First determine the side of the order 
+			Side incomingOrderSide = incomingOrder->getSide();
+			
+			if(incomingOrderSide == Side::Buy){
+				// Try to match with the best sell 
+				if(incomingOrder->getOrderType() == OrderType::Market){
+					Quantity totalQuantity = 0;
+
+					for (const auto& order : asks_.begin()->second) {
+					    totalQuantity += order->getRemainingQuantity();
+					}
+
+					if (totalQuantity < incomingOrder->getRemainingQuantity()) {
+					    return;
+					}
+				}
+				// If order is unable to match with best sell then add to orderbook	
+				if(*getBestAsk() > incomingOrder->getPrice()){
+					// add order to order book 
+
+					// Gonna need to lock the map
+					auto& orderList = bids_[incomingOrder->getPrice()];
+					orderList.push_back(incomingOrder);
+
+					const auto& it = std::prev(orderList.end());	// Points to the actual last element and not the end cuz of prev
+					
+					// Maybe might also need to lock the unordered_map due to hash collisions? Not sure I think I don't 
+					OrderEntry orderEntry;
+					orderEntry.order_ = incomingOrder;
+					orderEntry.location_ = it;	
+					
+					orders_[incomingOrder->getOrderId()] = orderEntry;
+					// Only need to lock once i need it i believe
+					return;
+				}
+
+
+			}
+
+					
+			if(incomingOrderSide == Side::Sell){
+				
+				// If order is unable to match with best bid then add to orderbook
+				if(getBestBid() < incomingOrder->getPrice()){
+					// add order to order book
+					return;
+				}
+			}
+
+			// Then try to match with the best available offer on the other side i.e the first in the map
+				// If you can't match then add to order book i.e the best offer is greater than the order's asking/buying price
+
+			// If you can match you match the price based on the minimum between the order price and the best price 
+			// Then you try to fill the order by going through the list of orders at the price 
+				// Continue going through the unfilled orders until the order is filled 	
+				// If unable to fill order fully add to the order book (Unless a market order fok, going to have to check before fill)
+				//
 			// Try to match the full order
 				// If market order then math with the best available bid/ask
 				// If market order cannot be fully filled FOK
-			
+				
 			// Anything remaining insert into book (Only if limit order)	
-		
-		
+					
+					
 		
 		}
 		
+		void modifyOrder(const OrderId& orderId){}
+		void cancelOrder(const OrderId& orderId){
 
-		bool cancelOrder(const OrderId& orderId){
+			// Find the order if the order doesn't exist throw 
+			const auto it = orders_.find(orderId);
+			if(it == orders_.end()){
+				throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
+			}
 
-			// Find the order if the order doesn't exist throw an error saying order doesn't exist 
-			
 
+				
 			// Do not allow others to access the order 
 			// Cancel order 
 			// Unlock 	
 
-			return true;
-
-
+			
 		}
 		
 		// Check to see if this can be inlined
@@ -150,14 +214,12 @@ class OrderBook{
 
 
 		//Check to see if this can be inlined 
-		const Price& getBestAsk() const { 
+		//Will return possible address of the pointer
+		const Price* getBestAsk() const { 
 			if(!asks_.empty()){
-				const auto& bestAsk = asks_.begin()->first;
-
-				return bestAsk;
-
+				return &asks_.begin()->first;
 			}	
-				
-			throw std::runtime_error("No asks available");		
+		
+			return nullptr;		
 		}
 };	
