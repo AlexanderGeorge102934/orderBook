@@ -194,7 +194,7 @@ class OrderBook{
 					Quantity quantityNeeded = incomingOrder->getRemainingQuantity();
 					Quantity totalQuantity = 0;
 					
-					//** YOU NEED TO LOCK ASKS HERE **//	
+					//** YOU NEED TO LOCK BIDS HERE **//	
 					
 
 					// Use an iterator to go through the map 
