@@ -10,7 +10,7 @@
 #include <stdexcept>
 
 enum class OrderType{
-	Market, // Technically this will be a FOK with pegged to best (You see if you can complete everything with only the best ask) for simplicity
+	Market, 
 	Limit };
 
 enum class Side{
@@ -120,32 +120,50 @@ class OrderBook{
 
 			if(incomingOrderSide == Side::Buy){
 
-				// Try to match with the best sell 
-
-				// This is technically a FOK w pegged to best meaning it will only fill if the quantity of the best 
-				// price is available to fully fill meaning it will not look at the second, third or fourth best like how a 
-				// market order actually does it 
-				// This is for simplicity later updates might include a practical market order 
+				// Try to fill the market order if the order type is a market  
 				if(incomingOrder->getOrderType() == OrderType::Market){
+					Quantity quantityNeeded = incomingOrder->getRemainingQuantity();
 					Quantity totalQuantity = 0;
+					
+					//** YOU NEED TO LOCK ASKS HERE **//	
+					
 
-					for (const auto& order : asks_.begin()->second) {
-					    totalQuantity += order->getRemainingQuantity();
+					// Use an iterator to go through the map 
+					auto it = asks_.begin();
+
+					// Continue going through the entire map until you have either filled your entire quantity 
+					// Or you reach the end in which you do nothing 
+
+					
+					//*** POTENTIALLY COULD BE BETTER OPTIMIZED BUT FOR NOW IT WILL STAY AS IS ***///
+					while(it != asks_.end() && totalQuantity < quantityNeeded){
+
+						// Get the minimum between what needs to be filled and how much you can fill 
+						for(const auto& order: it->second){
+							totalQuantity += std::min(quantityNeeded - totalQuantity, order->getRemainingQuantity());
+						}
+
+						++it;
+
 					}
+					
+					// Not enough to fill the market order 
+					if(totalQuantity < quantityNeeded){
+						return;
 
-					if (totalQuantity < incomingOrder->getRemainingQuantity()) {
-					    return;
 					}
 
 					// Complete the order by matching here
+					// Make sure to consider not having to go back again through the map and then filling the order 
+					// Find something more optimal 
 				}
+
 
 				// If order is unable to match with best sell then add to orderbook	
 				if(*getBestAsk() > incomingOrder->getPrice()){
-					// add order to order book 
-
+					
 					// Gonna need to lock the map
-					auto& orderList = bids_[incomingOrder->getPrice()];
+					OrderPointers& orderList = bids_[incomingOrder->getPrice()];
 					orderList.push_back(incomingOrder);
 
 					const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
@@ -160,8 +178,10 @@ class OrderBook{
 					return;
 				}
 
-
+				
 				// Do matching logic here 
+
+
 
 
 			}
@@ -169,19 +189,42 @@ class OrderBook{
 					
 			if(incomingOrderSide == Side::Sell){
 				
-				// Try to match with the best bid 
+				// Try to fill the market order if the order type is a market  
 				if(incomingOrder->getOrderType() == OrderType::Market){
+					Quantity quantityNeeded = incomingOrder->getRemainingQuantity();
 					Quantity totalQuantity = 0;
+					
+					//** YOU NEED TO LOCK ASKS HERE **//	
+					
 
-					for (const auto& order : bids_.begin()->second) {
-					    totalQuantity += order->getRemainingQuantity();
+					// Use an iterator to go through the map 
+					auto it = bids_.begin();
+
+					// Continue going through the entire map until you have either filled your entire quantity 
+					// Or you reach the end in which you do nothing 
+
+					
+					//*** POTENTIALLY COULD BE BETTER OPTIMIZED BUT FOR NOW IT WILL STAY AS IS ***///
+					while(it != bids_.end() && totalQuantity < quantityNeeded){
+
+						// Get the minimum between what needs to be filled and how much you can fill 
+						for(const auto& order: it->second){
+							totalQuantity += std::min(quantityNeeded - totalQuantity, order->getRemainingQuantity());
+						}
+
+						++it;
+
+					}
+					
+					// Not enough to fill the market order 
+					if(totalQuantity < quantityNeeded){
+						return;
+
 					}
 
-					if (totalQuantity < incomingOrder->getRemainingQuantity()) {	
-				    		return;
-					}
-
-					// Complete the order by matching here 
+					// Complete the order by matching here
+					// Make sure to consider not having to go back again through the map and then filling the order 
+					// Find something more optimal 
 				}
 
 				// If order is unable to match with best sell then add to orderbook	
