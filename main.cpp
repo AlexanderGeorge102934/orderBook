@@ -124,17 +124,24 @@ class OrderBook{
 		[[nodiscard]] const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
 
 		void matchOrder(const OrderPointer& incomingOrder){
+			
 
+			//TODO fix the order of logic in which the checking of if the orderbook is empty isn't being repeated 
 			// First determine the side of the order 
 			Side incomingOrderSide = incomingOrder->getSide();
 			
 
 			if(incomingOrderSide == Side::Buy){
 				
+					
 				Quantity quantityOfAsks = getQuantityOfAsks();	
+
+				if(quantityOfAsks == 0 && incomingOrder->getOrderType() == OrderType::Market){
+					return;
+				}
+
 				// If market order check to see if the quantity can be killed or FOK  
 				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfAsks){
-				
 						
 					// Complete the order by matching here
 					// Make sure to consider not having to go back again through the map and then filling the order 
