@@ -142,10 +142,11 @@ class OrderBook{
 					
 
 				}
+				
+				const Price* bestAsk = getBestAsk();
 
-
-				// If order is unable to match with best sell then add to orderbook	
-				if(*getBestAsk() > incomingOrder->getPrice()){
+				// If the order book is empty or the order is unable to match with best sell then add to orderbook	
+				if( (bestAsk == nullptr) || (*bestAsk > incomingOrder->getPrice()) ){
 					
 					// Gonna need to lock the map
 					OrderPointers& orderList = bids_[incomingOrder->getPrice()];
@@ -183,13 +184,15 @@ class OrderBook{
 					// Make sure to consider not having to go back again through the map and then filling the order 
 					// Find something more optimal 
 				}
+				
+				const Price* bestBid = getBestBid();
 
-				// If order is unable to match with best sell then add to orderbook	
-				if(*getBestBid() < incomingOrder->getPrice()){
+				// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
+				if( (bestBid == nullptr) || (*bestBid < incomingOrder->getPrice()) ){
 					// add order to order book 
 
 					// Gonna need to lock the map
-					auto& orderList = asks_[incomingOrder->getPrice()];
+					OrderPointers& orderList = asks_[incomingOrder->getPrice()];
 					orderList.push_back(incomingOrder);
 
 					const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
