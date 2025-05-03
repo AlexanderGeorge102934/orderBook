@@ -11,19 +11,24 @@
 
 enum class OrderType{
 	Market, 
-	Limit };
+	Limit 
+};
 
 enum class Side{
 	Buy,
 	Sell
 };
 
-
-// Aliases/Nicknames 
 using Price = uint32_t;
 using OrderId = uint64_t;
 using Quantity = uint32_t;
 using TradeId = uint32_t;
+
+namespace tradingValueConstants{
+
+	constexpr Price INVALID_PRICE = std::numeric_limits<Price>::max();
+
+}
 
 class Order{
 
@@ -45,15 +50,17 @@ class Order{
 			, remainingQuantity_ { remainingQuantity } 
 			{}
 
-		const Side& getSide() const { return side_; }
-		const Price& getPrice() const { return price_; } 
-		const OrderId& getOrderId() const { return orderId_; } 
-		const OrderType& getOrderType() const { return orderType_; }
-	       	const Quantity& getInitialQuantity() const { return initialQuantity_; }
-		const Quantity& getRemainingQuantity() const { return remainingQuantity_; } 
-		Quantity getFilledQuantity() const { return initialQuantity_ - remainingQuantity_; } 
-		bool isFilled() const { return getFilledQuantity() == 0; }
+		[[nodiscard]] const Side& getSide() const noexcept { return side_; }
+		[[nodiscard]] const Price& getPrice() const noexcept { return price_; } 
+		[[nodiscard]] const OrderId& getOrderId() const noexcept { return orderId_; } 
+		[[nodiscard]] const OrderType& getOrderType() const noexcept { return orderType_; }
+	       	[[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
+		[[nodiscard]] const Quantity& getRemainingQuantity() const noexcept { return remainingQuantity_; } 
+		[[nodiscard]] Quantity getFilledQuantity() const noexcept { return initialQuantity_ - remainingQuantity_; } 
+		[[nodiscard]] bool isFilled() const noexcept { return getFilledQuantity() == 0; }
 		void Fill(const Quantity& quantity){
+
+			// Assumption is that the quantity if greater should be handled before passing the quantity as an argument
 			if(quantity > getRemainingQuantity()){
 				throw std::logic_error(std::format("Quantity to fill is larger than the remaining quantity for Order({})", getOrderId()));
 			}	
@@ -84,11 +91,11 @@ class Trade{
 			, price_ { price } 
 			{}	
 
-		const TradeId& getTradeId() const { return tradeId_; }
-		const OrderId& getBuyOrderId() const { return buyOrderId_; } 
-		const OrderId& getSellOrderId() const { return sellOrderId_; }  
-		const Quantity& getQuantity() const { return quantity_; }
-		const Price& getPricce() const { return price_; }
+		[[nodiscard]] const TradeId& getTradeId() const noexcept { return tradeId_; }
+		[[nodiscard]] const OrderId& getBuyOrderId() const noexcept { return buyOrderId_; } 
+		[[nodiscard]] const OrderId& getSellOrderId() const noexcept { return sellOrderId_; }  
+		[[nodiscard]] const Quantity& getQuantity() const noexcept { return quantity_; }
+		[[nodiscard]] const Price& getPricce() const noexcept { return price_; }
 
 
 };
@@ -123,32 +130,33 @@ class OrderBook{
 				// Try to fill the market order if the order type is a market  
 				if(incomingOrder->getOrderType() == OrderType::Market){
 					Quantity quantityNeeded = incomingOrder->getRemainingQuantity();
-					Quantity totalQuantity = 0;
+					Quantity accumulatedQuantity = 0;
 					
 					//** YOU NEED TO LOCK ASKS HERE **//	
 					
 
 					// Use an iterator to go through the map 
-					auto it = asks_.begin();
+					auto asksIt = asks_.begin();
 
 					// Continue going through the entire map until you have either filled your entire quantity 
 					// Or you reach the end in which you do nothing 
 
 					
 					//*** POTENTIALLY COULD BE BETTER OPTIMIZED BUT FOR NOW IT WILL STAY AS IS ***///
-					while(it != asks_.end() && totalQuantity < quantityNeeded){
+					while(asksIt != asks_.end() && accumulatedQuantity < quantityNeeded){
 
 						// Get the minimum between what needs to be filled and how much you can fill 
-						for(const auto& order: it->second){
-							totalQuantity += std::min(quantityNeeded - totalQuantity, order->getRemainingQuantity());
+						for(const auto& order: asksIt->second){
+										
+							accumulatedQuantity += std::min(quantityNeeded - accumulatedQuantity, order->getRemainingQuantity());
 						}
 
-						++it;
+						++asksIt;
 
 					}
 					
 					// Not enough to fill the market order 
-					if(totalQuantity < quantityNeeded){
+					if(accumulatedQuantity < quantityNeeded){
 						return;
 
 					}
@@ -271,7 +279,9 @@ class OrderBook{
 					
 		
 		}
-		
+	
+
+		// Cancel order and modify order see if you can change it to bool instead 	
 		void modifyOrder(const OrderId& orderId){}
 		void cancelOrder(const OrderId& orderId){
 
@@ -291,7 +301,7 @@ class OrderBook{
 		}
 		
 		// Check to see if this can be inlined
-		const Price* getBestBid() const { 	
+		[[nodiscard]] const Price* getBestBid() const { 	
 			if(!bids_.empty()){ 
 				return &bids_.begin()->first;
 			}		
@@ -301,7 +311,7 @@ class OrderBook{
 
 		//Check to see if this can be inlined 
 		//Will return possible address of the pointer
-		const Price* getBestAsk() const { 
+		[[nodiscard]] const Price* getBestAsk() const { 
 			if(!asks_.empty()){
 				return &asks_.begin()->first;
 			}	
