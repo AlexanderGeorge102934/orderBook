@@ -117,8 +117,12 @@ class OrderBook{
 				OrderPointers::iterator location_;		
 		};
 		std::unordered_map<OrderId, OrderEntry> orders_;
+		Quantity quantityOfAsks_{};
+		Quantity quantityOfBids_{};
 	public:
-		
+		[[nodiscard]] const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
+		[[nodiscard]] const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
+
 		void matchOrder(const OrderPointer& incomingOrder){
 
 			// First determine the side of the order 
@@ -126,44 +130,17 @@ class OrderBook{
 			
 
 			if(incomingOrderSide == Side::Buy){
-
-				// Try to fill the market order if the order type is a market  
-				if(incomingOrder->getOrderType() == OrderType::Market){
-					Quantity quantityNeeded = incomingOrder->getRemainingQuantity();
-					Quantity accumulatedQuantity = 0;
-					
-					//** YOU NEED TO LOCK ASKS HERE **//	
-					
-
-					// Use an iterator to go through the map 
-					auto asksIt = asks_.begin();
-
-					// Continue going through the entire map until you have either filled your entire quantity 
-					// Or you reach the end in which you do nothing 
-
-					
-					//*** POTENTIALLY COULD BE BETTER OPTIMIZED BUT FOR NOW IT WILL STAY AS IS ***///
-					while(asksIt != asks_.end() && accumulatedQuantity < quantityNeeded){
-
-						// Get the minimum between what needs to be filled and how much you can fill 
-						for(const auto& order: asksIt->second){
-										
-							accumulatedQuantity += std::min(quantityNeeded - accumulatedQuantity, order->getRemainingQuantity());
-						}
-
-						++asksIt;
-
-					}
-					
-					// Not enough to fill the market order 
-					if(accumulatedQuantity < quantityNeeded){
-						return;
-
-					}
-
+				
+				Quantity quantityOfAsks = getQuantityOfAsks();	
+				// If market order check to see if the quantity can be killed or FOK  
+				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfAsks){
+				
+						
 					// Complete the order by matching here
 					// Make sure to consider not having to go back again through the map and then filling the order 
 					// Find something more optimal 
+					
+
 				}
 
 
@@ -197,38 +174,10 @@ class OrderBook{
 					
 			if(incomingOrderSide == Side::Sell){
 				
-				// Try to fill the market order if the order type is a market  
-				if(incomingOrder->getOrderType() == OrderType::Market){
-					Quantity quantityNeeded = incomingOrder->getRemainingQuantity();
-					Quantity totalQuantity = 0;
-					
-					//** YOU NEED TO LOCK BIDS HERE **//	
-					
+				Quantity quantityOfBids = getQuantityOfBids();
 
-					// Use an iterator to go through the map 
-					auto it = bids_.begin();
-
-					// Continue going through the entire map until you have either filled your entire quantity 
-					// Or you reach the end in which you do nothing 
-
-					
-					//*** POTENTIALLY COULD BE BETTER OPTIMIZED BUT FOR NOW IT WILL STAY AS IS ***///
-					while(it != bids_.end() && totalQuantity < quantityNeeded){
-
-						// Get the minimum between what needs to be filled and how much you can fill 
-						for(const auto& order: it->second){
-							totalQuantity += std::min(quantityNeeded - totalQuantity, order->getRemainingQuantity());
-						}
-
-						++it;
-
-					}
-					
-					// Not enough to fill the market order 
-					if(totalQuantity < quantityNeeded){
-						return;
-
-					}
+				// If the order type is market check to see if total quantity can be filled otherwise FOK
+				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() < quantityOfBids){
 
 					// Complete the order by matching here
 					// Make sure to consider not having to go back again through the map and then filling the order 
