@@ -8,6 +8,7 @@
 #include <vector>
 #include <numeric>
 #include <stdexcept>
+#include <limits>
 
 enum class OrderType{
 	Market, 
@@ -48,13 +49,19 @@ class Order{
 			, orderType_ { orderType } 
 			, initialQuantity_ { initialQuantity } 
 			, remainingQuantity_ { remainingQuantity } 
-			{}
+			{
+                // The quantity should never be less than 1 when initialized otherwise the order is filled 
+                if(initialQuantity < 1 || remainingQuantity < 1){
+                    throw std::invalid_argument(std::format("Order({}) must have quantity >= 1 (got initial: {}, remaining: {})",
+                        orderId, initialQuantity, remainingQuantity));
+                }
+            }
 
 		[[nodiscard]] const Side& getSide() const noexcept { return side_; }
 		[[nodiscard]] const Price& getPrice() const noexcept { return price_; } 
 		[[nodiscard]] const OrderId& getOrderId() const noexcept { return orderId_; } 
 		[[nodiscard]] const OrderType& getOrderType() const noexcept { return orderType_; }
-	       	[[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
+	    [[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
 		[[nodiscard]] const Quantity& getRemainingQuantity() const noexcept { return remainingQuantity_; } 
 		[[nodiscard]] Quantity getFilledQuantity() const noexcept { return initialQuantity_ - remainingQuantity_; } 
 		[[nodiscard]] bool isFilled() const noexcept { return getFilledQuantity() == 0; }
@@ -112,48 +119,62 @@ class OrderBook{
 		// ** Ask need to be in order from least to greatest representing the best asks ** //
 		std::map<Price, OrderPointers, std::greater<Price>> bids_;
 		std::map<Price, OrderPointers, std::less<Price>> asks_;
+
+		Quantity quantityOfBids_{};
+		Quantity quantityOfAsks_{};
+
 		struct OrderEntry{
 				OrderPointer order_ { nullptr };
 				OrderPointers::iterator location_;		
 		};
+
 		std::unordered_map<OrderId, OrderEntry> orders_;
-		Quantity quantityOfAsks_{};
-		Quantity quantityOfBids_{};
+
 	public:
-		[[nodiscard]] const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
-		[[nodiscard]] const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
+
+		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
+		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
 
 		void matchOrder(const OrderPointer& incomingOrder){
-			
 
 			//TODO fix the order of logic in which the checking of if the orderbook is empty isn't being repeated 
 			// First determine the side of the order 
 			Side incomingOrderSide = incomingOrder->getSide();
-			
 
 			if(incomingOrderSide == Side::Buy){
-				
 					
-				Quantity quantityOfAsks = getQuantityOfAsks();	
-
-				if(quantityOfAsks == 0 && incomingOrder->getOrderType() == OrderType::Market){
-					return;
-				}
-
-				// If market order check to see if the quantity can be killed or FOK  
+				Quantity quantityOfAsks = getQuantityOfAsks(); 
+                
+				// If market order check to see if the quantity can be filled or FOK  
 				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfAsks){
-						
-					// Complete the order by matching here
-					// Make sure to consider not having to go back again through the map and then filling the order 
-					// Find something more optimal 
-					
+
+                    // Go through each order at each best price and fill each order and subtract their quantity from the market order
+                    for (auto asksIt = asks_.begin(); asksIt != asks_.end() && incomingOrder->getRemainingQuantity() > 0;){
+                       
+                        OrderPointers& orderList = asksIt->second;
+
+                        for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
+                            OrderPointer& currentOrder = *orderIt;
+
+                            Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
+
+                            incomingOrder->Fill(quantityFilled);
+                            currentOrder->Fill(quantityFilled);
+                            
+                            quantityOfAsks_ -= quantityFilled;
+                            if(currentOrder->isFilled()){
+                                orderIt = orderList.erase(orderIt);
+                            }
+                    
+                        }
+                    }
 
 				}
 				
 				const Price* bestAsk = getBestAsk();
 
-				// If the order book is empty or the order is unable to match with best sell then add to orderbook	
-				if( (bestAsk == nullptr) || (*bestAsk > incomingOrder->getPrice()) ){
+				// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
+				if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
 					
 					// Gonna need to lock the map
 					OrderPointers& orderList = bids_[incomingOrder->getPrice()];
@@ -185,17 +206,33 @@ class OrderBook{
 				Quantity quantityOfBids = getQuantityOfBids();
 
 				// If the order type is market check to see if total quantity can be filled otherwise FOK
-				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() < quantityOfBids){
+				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfBids){
+                    
+                    for (auto bidsIt = bids_.begin(); bidsIt != bids_.end() && incomingOrder->getRemainingQuantity() > 0;){
+                       
+                        OrderPointers& orderList = bidsIt->second;
 
-					// Complete the order by matching here
-					// Make sure to consider not having to go back again through the map and then filling the order 
-					// Find something more optimal 
+                        for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
+                            OrderPointer& currentOrder = *orderIt;
+
+                            Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
+
+                            incomingOrder->Fill(quantityFilled);
+                            currentOrder->Fill(quantityFilled);
+                            
+                            quantityOfBids_ -= quantityFilled;
+                            if(currentOrder->isFilled()){
+                                orderIt = orderList.erase(orderIt);
+                            }
+                    
+                        }
+                    }
 				}
 				
 				const Price* bestBid = getBestBid();
 
 				// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
-				if( (bestBid == nullptr) || (*bestBid < incomingOrder->getPrice()) ){
+				if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
 					// add order to order book 
 
 					// Gonna need to lock the map
@@ -278,3 +315,8 @@ class OrderBook{
 			return nullptr;		
 		}
 };	
+
+
+int main(){
+    return 0;
+}
