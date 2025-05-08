@@ -9,6 +9,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <limits>
+#include <atomic> 
 
 enum class OrderType{
 	Market, 
@@ -29,6 +30,20 @@ namespace tradingValueConstants{
 
 	constexpr Price INVALID_PRICE = std::numeric_limits<Price>::max();
 
+}
+
+namespace IdGenerator{
+    std::atomic<OrderId> nextOrderId = 1;
+    std::atomic<TradeId> nextTradeId = 1;
+
+    OrderId generateOrderId(){
+        return nextOrderId++;
+    
+    }
+
+    TradeId generateTradeId(){
+        return nextTradeId++;
+    }
 }
 
 class Order{
@@ -73,12 +88,7 @@ class Order{
 			}	
 			
 			remainingQuantity_ -= quantity;	
-
 		}
-
-			
-
-
 };
 
 
@@ -102,7 +112,7 @@ class Trade{
 		[[nodiscard]] const OrderId& getBuyOrderId() const noexcept { return buyOrderId_; } 
 		[[nodiscard]] const OrderId& getSellOrderId() const noexcept { return sellOrderId_; }  
 		[[nodiscard]] const Quantity& getQuantity() const noexcept { return quantity_; }
-		[[nodiscard]] const Price& getPricce() const noexcept { return price_; }
+		[[nodiscard]] const Price& getPrice() const noexcept { return price_; }
 
 
 };
@@ -114,13 +124,17 @@ using Trades = std::vector<Trade>;
 
 
 class OrderBook{
-	private:
+	private: 
+        
+        Trades trades_;
+
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
 		// ** Ask need to be in order from least to greatest representing the best asks ** //
 		std::map<Price, OrderPointers, std::greater<Price>> bids_;
 		std::map<Price, OrderPointers, std::less<Price>> asks_;
+        // https://stackoverflow.com/questions/78518484/seamlessly-using-maps-with-different-comparators
 
-		Quantity quantityOfBids_{};
+        Quantity quantityOfBids_{};
 		Quantity quantityOfAsks_{};
 
 		struct OrderEntry{
@@ -129,13 +143,66 @@ class OrderBook{
 		};
 
 		std::unordered_map<OrderId, OrderEntry> orders_;
+       
+        // Will this be inefficent since you're making a function call? It reduces repeating code but there's potential overhead 
+        void fillMarketOrders(auto& orderMap, const OrderPointer& incomingOrder, const bool& isBuy){
+            
+            // Go through each order at each best price and fill each order and subtract their quantity from the market order
+            for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
+                
+                OrderPointers& orderList = it->second;
 
+                for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
+                    OrderPointer& currentOrder = *orderIt;
+
+                    Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
+
+                    incomingOrder->Fill(quantityFilled);
+                    currentOrder->Fill(quantityFilled);
+                    
+                    // Record the trade in the order book 
+                    TradeId tradeId{IdGenerator::generateTradeId()};                 
+                    Trade trade(tradeId, incomingOrder->getOrderId(), currentOrder->getOrderId(), quantityFilled, currentOrder->getPrice());
+                    trades_.push_back(trade);
+
+                    // Trade(const TradeId& tradeId, const OrderId& buyOrderId, const OrderId& sellOrderId, const Quantity& quantity, const Price& price)
+                    if(isBuy){
+                        quantityOfAsks_ -= quantityFilled;
+                    } else{
+                        quantityOfBids_ -= quantityFilled;
+                    }
+
+                    if(currentOrder->isFilled()){
+                        orderIt = orderList.erase(orderIt);
+                    }
+            
+                }
+            }
+        }
+
+        void addOrderToOrderBook(auto& orderMap, const OrderPointer& incomingOrder){
+
+            // Gonna need to lock the map
+            OrderPointers& orderList = orderMap[incomingOrder->getPrice()];
+            orderList.push_back(incomingOrder);
+
+            const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
+            
+            // Maybe might also need to lock the unordered_map due to hash collisions? Not sure I think I don't 
+            OrderEntry orderEntry;
+            orderEntry.order_ = incomingOrder;
+            orderEntry.location_ = it;	
+            
+            orders_[incomingOrder->getOrderId()] = orderEntry;
+            // Only need to lock once i need it i believe
+            return;
+        }
 	public:
 
 		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
 		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
-
-		void matchOrder(const OrderPointer& incomingOrder){
+        
+		void processOrder(const OrderPointer& incomingOrder){
 
 			//TODO fix the order of logic in which the checking of if the orderbook is empty isn't being repeated 
 			// First determine the side of the order 
@@ -147,55 +214,17 @@ class OrderBook{
                 
 				// If market order check to see if the quantity can be filled or FOK  
 				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfAsks){
-
-                    // Go through each order at each best price and fill each order and subtract their quantity from the market order
-                    for (auto asksIt = asks_.begin(); asksIt != asks_.end() && incomingOrder->getRemainingQuantity() > 0;){
-                       
-                        OrderPointers& orderList = asksIt->second;
-
-                        for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
-                            OrderPointer& currentOrder = *orderIt;
-
-                            Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
-
-                            incomingOrder->Fill(quantityFilled);
-                            currentOrder->Fill(quantityFilled);
-                            
-                            quantityOfAsks_ -= quantityFilled;
-                            if(currentOrder->isFilled()){
-                                orderIt = orderList.erase(orderIt);
-                            }
-                    
-                        }
-                    }
-
+                    fillMarketOrders(asks_, incomingOrder, true);
 				}
 				
 				const Price* bestAsk = getBestAsk();
 
 				// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
 				if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
-					
-					// Gonna need to lock the map
-					OrderPointers& orderList = bids_[incomingOrder->getPrice()];
-					orderList.push_back(incomingOrder);
-
-					const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
-					
-					// Maybe might also need to lock the unordered_map due to hash collisions? Not sure I think I don't 
-					OrderEntry orderEntry;
-					orderEntry.order_ = incomingOrder;
-					orderEntry.location_ = it;	
-					
-					orders_[incomingOrder->getOrderId()] = orderEntry;
-					// Only need to lock once i need it i believe
-					return;
+                    addOrderToOrderBook(bids_, incomingOrder);
 				}
-
 				
 				// Do matching logic here 
-
-
 
 
 			}
@@ -206,49 +235,15 @@ class OrderBook{
 				Quantity quantityOfBids = getQuantityOfBids();
 
 				// If the order type is market check to see if total quantity can be filled otherwise FOK
-				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfBids){
-                    
-                    for (auto bidsIt = bids_.begin(); bidsIt != bids_.end() && incomingOrder->getRemainingQuantity() > 0;){
-                       
-                        OrderPointers& orderList = bidsIt->second;
-
-                        for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
-                            OrderPointer& currentOrder = *orderIt;
-
-                            Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
-
-                            incomingOrder->Fill(quantityFilled);
-                            currentOrder->Fill(quantityFilled);
-                            
-                            quantityOfBids_ -= quantityFilled;
-                            if(currentOrder->isFilled()){
-                                orderIt = orderList.erase(orderIt);
-                            }
-                    
-                        }
-                    }
+				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfBids){ 
+                    fillMarketOrders(bids_, incomingOrder, false);
 				}
 				
 				const Price* bestBid = getBestBid();
 
 				// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
 				if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
-					// add order to order book 
-
-					// Gonna need to lock the map
-					OrderPointers& orderList = asks_[incomingOrder->getPrice()];
-					orderList.push_back(incomingOrder);
-
-					const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
-					
-					// Maybe might also need to lock the unordered_map due to hash collisions? Not sure I think I don't 
-					OrderEntry orderEntry;
-					orderEntry.order_ = incomingOrder;
-					orderEntry.location_ = it;	
-					
-					orders_[incomingOrder->getOrderId()] = orderEntry;
-					// Only need to lock once i need it i believe
-					return;
+                    addOrderToOrderBook(asks_, incomingOrder);
 				}
 
 				// Do matching logic here
