@@ -76,7 +76,7 @@ class Order{
 		[[nodiscard]] const Price& getPrice() const noexcept { return price_; } 
 		[[nodiscard]] const OrderId& getOrderId() const noexcept { return orderId_; } 
 		[[nodiscard]] const OrderType& getOrderType() const noexcept { return orderType_; }
-	    [[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
+	    	[[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
 		[[nodiscard]] const Quantity& getRemainingQuantity() const noexcept { return remainingQuantity_; } 
 		[[nodiscard]] Quantity getFilledQuantity() const noexcept { return initialQuantity_ - remainingQuantity_; } 
 		[[nodiscard]] bool isFilled() const noexcept { return getFilledQuantity() == 0; }
@@ -128,21 +128,21 @@ class OrderBook{
         
         Trades trades_;
 
-		// ** Bids need to be in order from greatest to least representing the best bids ** //
-		// ** Ask need to be in order from least to greatest representing the best asks ** //
-		std::map<Price, OrderPointers, std::greater<Price>> bids_;
-		std::map<Price, OrderPointers, std::less<Price>> asks_;
+	// ** Bids need to be in order from greatest to least representing the best bids ** //
+	// ** Ask need to be in order from least to greatest representing the best asks ** //
+	std::map<Price, OrderPointers, std::greater<Price>> bids_;
+	std::map<Price, OrderPointers, std::less<Price>> asks_;
         // https://stackoverflow.com/questions/78518484/seamlessly-using-maps-with-different-comparators
 
         Quantity quantityOfBids_{};
-		Quantity quantityOfAsks_{};
+	Quantity quantityOfAsks_{};
 
-		struct OrderEntry{
-				OrderPointer order_ { nullptr };
-				OrderPointers::iterator location_;		
-		};
+	struct OrderEntry{
+			OrderPointer order_ { nullptr };
+			OrderPointers::iterator location_;		
+	};
 
-		std::unordered_map<OrderId, OrderEntry> orders_;
+	std::unordered_map<OrderId, OrderEntry> orders_;
        
         // Will this be inefficent since you're making a function call? It reduces repeating code but there's potential overhead 
         void fillMarketOrders(auto& orderMap, const OrderPointer& incomingOrder, const bool& isBuy){
