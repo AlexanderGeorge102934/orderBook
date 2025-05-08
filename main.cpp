@@ -145,7 +145,7 @@ class OrderBook{
         std::unordered_map<OrderId, OrderEntry> orders_;
        
         // Will this be inefficent since you're making a function call? It reduces repeating code but there's potential overhead 
-        void fillMarketOrders(auto& orderMap, const OrderPointer& incomingOrder, const bool& isBuy){
+        void fillMarketOrders(auto& orderMap, const OrderPointer& incomingOrder, const bool&& isBuy){
             
             // Go through each order at each best price and fill each order and subtract their quantity from the market order
             for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
