@@ -279,7 +279,7 @@ class OrderBook{
 	
 
 		// Cancel order and modify order see if you can change it to bool instead 	
-		void modifyOrder(const OrderId& orderId){}
+		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price){}
 		void cancelOrder(const OrderId& orderId){
 
 			// Find the order if the order doesn't exist throw 
