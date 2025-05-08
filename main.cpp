@@ -128,21 +128,21 @@ class OrderBook{
         
         Trades trades_;
 
-	// ** Bids need to be in order from greatest to least representing the best bids ** //
-	// ** Ask need to be in order from least to greatest representing the best asks ** //
-	std::map<Price, OrderPointers, std::greater<Price>> bids_;
-	std::map<Price, OrderPointers, std::less<Price>> asks_;
+        // ** Bids need to be in order from greatest to least representing the best bids ** //
+        // ** Ask need to be in order from least to greatest representing the best asks ** //
+        std::map<Price, OrderPointers, std::greater<Price>> bids_;
+        std::map<Price, OrderPointers, std::less<Price>> asks_;
         // https://stackoverflow.com/questions/78518484/seamlessly-using-maps-with-different-comparators
 
         Quantity quantityOfBids_{};
-	Quantity quantityOfAsks_{};
+        Quantity quantityOfAsks_{};
 
-	struct OrderEntry{
-			OrderPointer order_ { nullptr };
-			OrderPointers::iterator location_;		
-	};
+        struct OrderEntry{
+                OrderPointer order_ { nullptr };
+                OrderPointers::iterator location_;		
+        };
 
-	std::unordered_map<OrderId, OrderEntry> orders_;
+        std::unordered_map<OrderId, OrderEntry> orders_;
        
         // Will this be inefficent since you're making a function call? It reduces repeating code but there's potential overhead 
         void fillMarketOrders(auto& orderMap, const OrderPointer& incomingOrder, const bool& isBuy){
@@ -180,7 +180,7 @@ class OrderBook{
             }
         }
 
-        void addOrderToOrderBook(auto& orderMap, const OrderPointer& incomingOrder){
+        void addOrderToOrderBook(auto& orderMap, const OrderPointer& incomingOrder, const bool& isBuy){
 
             // Gonna need to lock the map
             OrderPointers& orderList = orderMap[incomingOrder->getPrice()];
@@ -195,8 +195,14 @@ class OrderBook{
             
             orders_[incomingOrder->getOrderId()] = orderEntry;
             // Only need to lock once i need it i believe
-            return;
+
+            if(isBuy){
+                quantityOfBids_ += incomingOrder->getRemainingQuantity(); 
+            } else{
+                quantityOfAsks_ += incomingOrder->getRemainingQuantity();
+            }
         }
+
 	public:
 
 		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
@@ -221,7 +227,7 @@ class OrderBook{
 
 				// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
 				if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
-                    addOrderToOrderBook(bids_, incomingOrder);
+                    addOrderToOrderBook(bids_, incomingOrder, true);
 				}
 				
 				// Do matching logic here 
@@ -243,7 +249,7 @@ class OrderBook{
 
 				// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
 				if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
-                    addOrderToOrderBook(asks_, incomingOrder);
+                    addOrderToOrderBook(asks_, incomingOrder, false);
 				}
 
 				// Do matching logic here
