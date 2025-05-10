@@ -145,13 +145,26 @@ class OrderBook{
 		std::unordered_map<OrderId, OrderEntry> orders_;
 	       
 		// Will this be inefficent since you're making a function call? It reduces repeating code but there's potential overhead 
-		void fillMarketOrders(auto& orderMap, const OrderPointer& incomingOrder){
+		void fillOrders(auto& orderMap, const OrderPointer& incomingOrder){
 		    
 		    // Go through each order at each best price and fill each order and subtract their quantity from the market order
 		    for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
-			
-			OrderPointers& orderList = it->second;
+		
+			Price currentPrice = it->first;
 
+			// Limit order price constraint check
+			// Gauranteed to match the best price but not the worst price so you need this check here 
+			if (incomingOrder->getOrderType() == OrderType::Limit) {
+			    if ((incomingOrder->getSide() == Side::Buy && currentPrice > incomingOrder->getPrice()) ||
+				(incomingOrder->getSide() == Side::Sell && currentPrice < incomingOrder->getPrice())) {
+				break; // You went in too deep 
+			    }
+			}
+
+
+			OrderPointers& orderList = it->second;
+			
+			// Go through the map at each price with the value being all the orders FIFO at that price
 			for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
 			    OrderPointer& currentOrder = *orderIt;
 
@@ -162,7 +175,14 @@ class OrderBook{
 			    
 			    // Record the trade in the order book 
 			    TradeId tradeId{IdGenerator::generateTradeId()};                 
-			    Trade trade(tradeId, incomingOrder->getOrderId(), currentOrder->getOrderId(), quantityFilled, currentOrder->getPrice());
+			    Trade trade
+			    {
+				    tradeId, 
+				    incomingOrder->getOrderId(), 
+				    currentOrder->getOrderId(), 
+				    quantityFilled, 
+				    currentOrder->getPrice()
+			    };
 			    trades_.push_back(trade);
 
 			    // Trade(const TradeId& tradeId, const OrderId& buyOrderId, const OrderId& sellOrderId, const Quantity& quantity, const Price& price)
@@ -177,6 +197,11 @@ class OrderBook{
 			    }
 		    
 			}
+
+			if(orderList.empty()){
+				it = orderMap.erase(it);
+			}
+
 		    }
 		}
 
@@ -222,7 +247,8 @@ class OrderBook{
 				// If market order check to see if the quantity can be filled or FOK 
 				// Inherintly checks that the orderbook isn't empty  
 				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfAsks){
-				    fillMarketOrders(asks_, incomingOrder);
+				    fillOrders(asks_, incomingOrder);
+				    return;
 				}
 				
 				const Price* bestAsk = getBestAsk();
@@ -230,9 +256,16 @@ class OrderBook{
 				// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
 				if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
 				    addOrderToOrderBook(bids_, incomingOrder);
+				    return;
 				}
 				
 				// Do matching logic here 
+				fillOrders(asks_, incomingOrder);
+				if(!incomingOrder->isFilled()){
+				   addOrderToOrderBook(bids_, incomingOrder);
+				}
+
+
 
 
 			}
@@ -245,7 +278,8 @@ class OrderBook{
 				// If the order type is market check to see if total quantity can be filled otherwise FOK
 				// Inherintly checks that the order book isn't empty 
 				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfBids){ 
-				    fillMarketOrders(bids_, incomingOrder);
+				    fillOrders(bids_, incomingOrder);
+				    return;
 				}
 				
 				const Price* bestBid = getBestBid();
@@ -253,9 +287,15 @@ class OrderBook{
 				// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
 				if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
 				    addOrderToOrderBook(asks_, incomingOrder);
+				    return;
 				}
 
-				// Do matching logic here
+				// Do matching logic here 
+				fillOrders(bids_, incomingOrder);
+				if(!incomingOrder->isFilled()){
+				   addOrderToOrderBook(asks_, incomingOrder);
+				}
+				
 
 
 
