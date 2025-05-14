@@ -76,7 +76,7 @@ class Order{
 		[[nodiscard]] const Price& getPrice() const noexcept { return price_; } 
 		[[nodiscard]] const OrderId& getOrderId() const noexcept { return orderId_; } 
 		[[nodiscard]] const OrderType& getOrderType() const noexcept { return orderType_; }
-	    	[[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
+	    [[nodiscard]] const Quantity& getInitialQuantity() const noexcept { return initialQuantity_; }
 		[[nodiscard]] const Quantity& getRemainingQuantity() const noexcept { return remainingQuantity_; } 
 		[[nodiscard]] Quantity getFilledQuantity() const noexcept { return initialQuantity_ - remainingQuantity_; } 
 		[[nodiscard]] bool isFilled() const noexcept { return getFilledQuantity() == 0; }
@@ -143,6 +143,7 @@ class OrderBook{
 		};
 
 		std::unordered_map<OrderId, OrderEntry> orders_;
+
 	       
 		// Will this be inefficent since you're making a function call? It reduces repeating code but there's potential overhead 
 		void fillOrders(auto& orderMap, const OrderPointer& incomingOrder){
@@ -150,57 +151,57 @@ class OrderBook{
 		    // Go through each order at each best price and fill each order and subtract their quantity from the market order
 		    for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
 		
-			Price currentPrice = it->first;
+                Price currentPrice = it->first;
 
-			// Limit order price constraint check
-			// Gauranteed to match the best price but not the worst price so you need this check here 
-			if (incomingOrder->getOrderType() == OrderType::Limit) {
-			    if ((incomingOrder->getSide() == Side::Buy && currentPrice > incomingOrder->getPrice()) ||
-				(incomingOrder->getSide() == Side::Sell && currentPrice < incomingOrder->getPrice())) {
-				break; // You went in too deep 
-			    }
-			}
+                // Limit order price constraint check
+                // Gauranteed to match the best price but not the worst price so you need this check here 
+                if (incomingOrder->getOrderType() == OrderType::Limit) {
+                    if ((incomingOrder->getSide() == Side::Buy && currentPrice > incomingOrder->getPrice()) ||
+                    (incomingOrder->getSide() == Side::Sell && currentPrice < incomingOrder->getPrice())) {
+                        break; // You went in too deep 
+                    }
+                }
 
 
-			OrderPointers& orderList = it->second;
-			
-			// Go through the map at each price with the value being all the orders FIFO at that price
-			for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
-			    OrderPointer& currentOrder = *orderIt;
+                OrderPointers& orderList = it->second;
+                
+                // Go through the map at each price with the value being all the orders FIFO at that price
+                for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
+                    OrderPointer& currentOrder = *orderIt;
 
-			    Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
+                    Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
 
-			    incomingOrder->Fill(quantityFilled);
-			    currentOrder->Fill(quantityFilled);
-			    
-			    // Record the trade in the order book 
-			    TradeId tradeId{IdGenerator::generateTradeId()};                 
-			    Trade trade
-			    {
-				    tradeId, 
-				    incomingOrder->getOrderId(), 
-				    currentOrder->getOrderId(), 
-				    quantityFilled, 
-				    currentOrder->getPrice()
-			    };
-			    trades_.push_back(trade);
+                    incomingOrder->Fill(quantityFilled);
+                    currentOrder->Fill(quantityFilled);
+                    
+                    // Record the trade in the order book 
+                    TradeId tradeId{IdGenerator::generateTradeId()};                 
+                    Trade trade
+                    {
+                        tradeId, 
+                        incomingOrder->getOrderId(), 
+                        currentOrder->getOrderId(), 
+                        quantityFilled, 
+                        currentOrder->getPrice()
+                    };
+                    trades_.push_back(trade);
 
-			    // Trade(const TradeId& tradeId, const OrderId& buyOrderId, const OrderId& sellOrderId, const Quantity& quantity, const Price& price)
-			    if(incomingOrder->getSide() == Side::Buy){
-				quantityOfAsks_ -= quantityFilled;
-			    } else{
-				quantityOfBids_ -= quantityFilled;
-			    }
+                    // Trade(const TradeId& tradeId, const OrderId& buyOrderId, const OrderId& sellOrderId, const Quantity& quantity, const Price& price)
+                    if(incomingOrder->getSide() == Side::Buy){
+                        quantityOfAsks_ -= quantityFilled;
+                    } else{
+                        quantityOfBids_ -= quantityFilled;
+                    }
 
-			    if(currentOrder->isFilled()){
-				orderIt = orderList.erase(orderIt);
-			    }
-		    
-			}
+                    if(currentOrder->isFilled()){
+                        orderIt = orderList.erase(orderIt);
+                    }
+                
+                }
 
-			if(orderList.empty()){
-				it = orderMap.erase(it);
-			}
+                if(orderList.empty()){
+                    it = orderMap.erase(it);
+                }
 
 		    }
 		}
@@ -222,9 +223,9 @@ class OrderBook{
 		    // Only need to lock once i need it i believe
 
 		    if(incomingOrder->getSide() == Side::Buy){
-			quantityOfBids_ += incomingOrder->getRemainingQuantity(); 
+			    quantityOfBids_ += incomingOrder->getRemainingQuantity(); 
 		    } else{
-			quantityOfAsks_ += incomingOrder->getRemainingQuantity();
+			    quantityOfAsks_ += incomingOrder->getRemainingQuantity();
 		    }
 		}
 
@@ -246,10 +247,15 @@ class OrderBook{
                 
 				// If market order check to see if the quantity can be filled or FOK 
 				// Inherintly checks that the orderbook isn't empty  
-				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfAsks){
-				    fillOrders(asks_, incomingOrder);
-				    return;
-				}
+                if(incomingOrder->getOrderType() == OrderType::Market){
+
+                    if( incomingOrder->getRemainingQuantity() <= quantityOfAsks){
+                        fillOrders(asks_, incomingOrder);
+                        return;
+                    }
+
+                    return;
+                }
 				
 				const Price* bestAsk = getBestAsk();
 
@@ -277,10 +283,15 @@ class OrderBook{
 
 				// If the order type is market check to see if total quantity can be filled otherwise FOK
 				// Inherintly checks that the order book isn't empty 
-				if(incomingOrder->getOrderType() == OrderType::Market && incomingOrder->getRemainingQuantity() <= quantityOfBids){ 
-				    fillOrders(bids_, incomingOrder);
-				    return;
-				}
+                if(incomingOrder->getOrderType() == OrderType::Market){
+
+                    if( incomingOrder->getRemainingQuantity() <= quantityOfBids){
+                        fillOrders(bids_, incomingOrder);
+                        return;
+                    }
+
+                    return;
+                }
 				
 				const Price* bestBid = getBestBid();
 
@@ -301,23 +312,7 @@ class OrderBook{
 
 
 			}
-
-			// Then try to match with the best available offer on the other side i.e the first in the map
-				// If you can't match then add to order book i.e the best offer is greater than the order's asking/buying price
-
-			// If you can match you match the price based on the minimum between the order price and the best price 
-			// Then you try to fill the order by going through the list of orders at the price 
-				// Continue going through the unfilled orders until the order is filled 	
-				// If unable to fill order fully add to the order book (Unless a market order fok, going to have to check before fill)
-				//
-			// Try to match the full order
-				// If market order then math with the best available bid/ask
-				// If market order cannot be fully filled FOK
-				
-			// Anything remaining insert into book (Only if limit order)	
-					
-					
-		
+	
 		}
 	
 
