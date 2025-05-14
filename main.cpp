@@ -65,11 +65,17 @@ class Order{
 			, initialQuantity_ { initialQuantity } 
 			, remainingQuantity_ { remainingQuantity } 
 			{
-                // The quantity should never be less than 1 when initialized otherwise the order is filled 
-                if(initialQuantity < 1 || remainingQuantity < 1){
-                    throw std::invalid_argument(std::format("Order({}) must have quantity >= 1 (got initial: {}, remaining: {})",
-                        orderId, initialQuantity, remainingQuantity));
+                // The quantity should never be less than 1 when initialized otherwise the order is filled             
+				if (initialQuantity < 1) {
+                    throw std::invalid_argument(std::format("Order({}) must have initial quantity >= 1 (got {})", orderId, initialQuantity));
                 }
+                if (remainingQuantity < 1) {
+                    throw std::invalid_argument(std::format("Order({}) must have remaining quantity >= 1 (got {})", orderId, remainingQuantity));
+                }
+                if(remainingQuantity_ > initialQuantity_){
+                    throw std::invalid_argument(std::format("Order({}) cannot have a greater remaining quantity than initial", orderId));
+                }
+
             }
 
 		[[nodiscard]] const Side& getSide() const noexcept { return side_; }
