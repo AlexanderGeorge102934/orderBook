@@ -162,10 +162,12 @@ class OrderBook{
                 // Limit order price constraint check
                 // Gauranteed to match the best price but not the worst price so you need this check here 
                 if (incomingOrder->getOrderType() == OrderType::Limit) {
+
                     if ((incomingOrder->getSide() == Side::Buy && currentPrice > incomingOrder->getPrice()) ||
                     (incomingOrder->getSide() == Side::Sell && currentPrice < incomingOrder->getPrice())) {
                         break; // You went in too deep 
                     }
+
                 }
 
 
@@ -277,9 +279,6 @@ class OrderBook{
 				   addOrderToOrderBook(bids_, incomingOrder);
 				}
 
-
-
-
 			}
 
 					
@@ -297,6 +296,7 @@ class OrderBook{
                     }
 
                     return;
+
                 }
 				
 				const Price* bestBid = getBestBid();
@@ -314,9 +314,6 @@ class OrderBook{
 				}
 				
 
-
-
-
 			}
 	
 		}
@@ -331,12 +328,6 @@ class OrderBook{
 			if(it == orders_.end()){
 				throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
 			}
-
-
-				
-			// Do not allow others to access the order 
-			// Cancel order 
-			// Unlock 	
 
 			
 		}
