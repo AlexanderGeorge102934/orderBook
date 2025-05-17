@@ -1,7 +1,13 @@
-#include <iostream>
 
 #ifndef ORDER_H
 #define ORDER_H
+
+#include <iostream>
+#include <format> 
+
+#include "Side.h"
+#include "Using.h"
+#include "OrderType.h"
 
 class Order{
 
