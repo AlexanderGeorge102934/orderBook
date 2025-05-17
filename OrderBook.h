@@ -38,9 +38,12 @@ class OrderBook{
 		};
 
 		std::unordered_map<OrderId, OrderEntry> orders_;
-	       
-		void fillOrders(auto& orderMap, const OrderPointer& incomingOrder);
-		void addOrderToOrderBook(auto& orderMap, const OrderPointer& incomingOrder);
+
+		template<typename OrderMap>	       
+		void fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder);
+
+		template<typename OrderMap>
+		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
 	public:
 

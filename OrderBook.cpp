@@ -1,6 +1,7 @@
 #include "OrderBook.h"
 
-OrderBook::void fillOrders(auto& orderMap, const OrderPointer& incomingOrder)
+template <typename OrderMap>
+void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder)
 { 
     // Go through each order at each best price and fill each order and subtract their quantity from the market order
     for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
@@ -62,8 +63,8 @@ OrderBook::void fillOrders(auto& orderMap, const OrderPointer& incomingOrder)
     }
 }
 
-
-OrderBook::void addOrderToOrderBook(auto& orderMap, const OrderPointer& incomingOrder){
+template<typename OrderMap>
+void OrderBook::addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder){
 
         // Gonna need to lock the map
         OrderPointers& orderList = orderMap[incomingOrder->getPrice()];
@@ -88,7 +89,7 @@ OrderBook::void addOrderToOrderBook(auto& orderMap, const OrderPointer& incoming
 
 
 
-OrderBook::void processOrder(const OrderPointer& incomingOrder)
+void OrderBook::processOrder(const OrderPointer& incomingOrder)
 {
     // TODO Find a way to better optimize the code (First see how the compiler compiles and if it doesn't optimize then you do it 
     // First determine the side of the order 
