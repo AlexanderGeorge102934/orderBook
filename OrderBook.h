@@ -1,4 +1,3 @@
-
 #ifndef ORDERBOOK_H
 #define ORDERBOOK_H
 
@@ -18,9 +17,25 @@
 #include "Side.h"
 #include "Containers.h"
 
+class IdGenerator{
+	private:
+	    OrderId nextOrderId{1};
+	    TradeId nextTradeId{1};
+
+	public:
+	    OrderId generateOrderId(){
+			return nextOrderId++;
+	    
+	    }
+
+	    TradeId generateTradeId(){
+			return nextTradeId++;
+	    }
+};
+
 class OrderBook{
 	private: 
-        
+		IdGenerator idGenerator_;	
 		Trades trades_;
 
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
