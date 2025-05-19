@@ -11,20 +11,19 @@
 #include <stdexcept>
 #include <string>  
 #include <format>  
+#include <atomic> 
 
 #include "Order.h"
 #include "Using.h" 
 #include "OrderType.h"
 #include "Side.h"
 #include "Containers.h"
-#include "IdGenerator.h"
-
-
 
 class OrderBook{
 	private: 
-		IdGenerator& idGenerator_;
+        
 		Trades trades_;
+    	std::atomic<TradeId> nextTradeId{1};
 
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
 		// ** Ask need to be in order from least to greatest representing the best asks ** //
@@ -49,12 +48,6 @@ class OrderBook{
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
 	public:
-
-		OrderBook(IdGenerator& idGenerator)
-		: idGenerator_ { idGenerator}
-		{
-
-		}
 
 		[[nodiscard]] const Price* getBestBid() const { 	
 			if(!bids_.empty()){ 
