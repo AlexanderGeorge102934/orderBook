@@ -5,23 +5,6 @@
 #include "OrderBook.h"
 
 
-
-class IdGenerator{
-	private:
-	    OrderId nextOrderId{1};
-	    TradeId nextTradeId{1};
-
-	public:
-	    OrderId generateOrderId(){
-		return nextOrderId++;
-	    
-	    }
-
-	    TradeId generateTradeId(){
-		return nextTradeId++;
-	    }
-};
-
 class MatchingEngine{
 
     private:
