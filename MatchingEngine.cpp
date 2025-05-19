@@ -1,7 +1,7 @@
 #include <iostream>
 #include <thread> 
 
-#include "ThreadGaurd.h"
+#include "ThreadGuard.h"
 #include "OrderBook.h"
 
 
@@ -26,8 +26,8 @@ class MatchingEngine{
 
     private:
         std::thread matchingThread_;
-        ThreadGaurd threadGaurd_;
-	IdGenerator idGenerator_;
+        ThreadGuard threadGuard_;
+	    IdGenerator idGenerator_;
         OrderBook orderBook_;
 
         // Add a OrderBook object 
@@ -35,9 +35,9 @@ class MatchingEngine{
     public:
 
         MatchingEngine() 
-        : matchingThread { }
-        , threadGaurd { matchingThread }
-	, idGenerator_ {}
+        : matchingThread_ { }
+        , threadGuard_ { matchingThread_ }
+	    , idGenerator_ {}
         , orderBook_ {}
         {
 
@@ -58,4 +58,4 @@ class MatchingEngine{
         ~MatchingEngine(){
 
         }
-}
+};
