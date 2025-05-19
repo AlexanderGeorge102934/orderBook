@@ -1,3 +1,4 @@
+
 #ifndef ORDERBOOK_H
 #define ORDERBOOK_H
 
@@ -16,10 +17,13 @@
 #include "OrderType.h"
 #include "Side.h"
 #include "Containers.h"
+#include "IdGenerator.h"
+
 
 
 class OrderBook{
 	private: 
+		IdGenerator& idGenerator_;
 		Trades trades_;
 
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
@@ -45,6 +49,12 @@ class OrderBook{
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
 	public:
+
+		OrderBook(IdGenerator& idGenerator)
+		: idGenerator_ { idGenerator}
+		{
+
+		}
 
 		[[nodiscard]] const Price* getBestBid() const { 	
 			if(!bids_.empty()){ 
