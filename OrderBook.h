@@ -20,7 +20,6 @@
 
 class OrderBook{
 	private: 
-		IdGenerator idGenerator_;	
 		Trades trades_;
 
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
