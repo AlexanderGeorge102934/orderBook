@@ -1,29 +1,29 @@
 
-#ifndef THREAD_GAURD_H
-#define THREAD_GAURD_H
+#ifndef THREAD_GUARD_H
+#define THREAD_GUARD_H
 
 #include <thread>
 
-class ThreadGaurd{
+class ThreadGuard{
     private:
         std::thread& t_;
 
     public:
-        explicit ThreadGaurd(std::thread& t)
+        explicit ThreadGuard(std::thread& t)
         : t_ { t } 
         {
 
         }
 
-        ~ThreadGaurd(){
+        ~ThreadGuard(){
             if(t_.joinable()){
                 t_.join();
             }
         }
 
-        ThreadGaurd(const ThreadGaurd& threadGaurd) = delete;
-        ThreadGaurd operator=(const ThreadGuard& threadGaurd) = delete;
+        ThreadGuard(const ThreadGuard& threadGaurd) = delete;
+        ThreadGuard operator=(const ThreadGuard& threadGuard) = delete;
 
-}
+};
 
 #endif
