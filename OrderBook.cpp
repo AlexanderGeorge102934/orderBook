@@ -32,7 +32,7 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
             currentOrder->Fill(quantityFilled);
             
             // Record the trade in the order book 
-            TradeId tradeId{IdGenerator::generateTradeId()};                 
+            TradeId tradeId{idGenerator_.nextTradeId()};                 
             Trade trade
             {
                 tradeId, 
