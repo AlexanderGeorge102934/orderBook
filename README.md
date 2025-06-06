@@ -34,8 +34,8 @@ To build and run this project:
 
 ## Build Environment
 
-* **OS:** Windows (MinGW)
-* **Compiler:** GCC
+* **OS:** Windows 
+* **Compiler:** GCC port from MinGW
 * **C++ Version:** C++20
 * **Others:** macOS/Linux should work using system default compilers.
 
@@ -43,7 +43,7 @@ To build and run this project:
 
 ## Build Instructions
 
-1. Navigate to your project root directory.
+1. Go to your project root directory.
 
 2. Create your build files:
 
@@ -55,7 +55,7 @@ To build and run this project:
    > On Windows using MinGW, CMake may default to `nmake`. To avoid this:
 
    ```bash
-   cmake -S . -B build -G "MinGW MakeFiles"
+   cmake -S . -B build -G "MinGW MakeFiles" credit to [This Stack OverFlow Post]([https://github.com/google/googletest](https://stackoverflow.com/questions/69338088/error-while-configuring-cmake-project-running-nmake-failed))
    ```
 
 3. Build the project:
