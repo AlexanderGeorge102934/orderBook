@@ -54,9 +54,12 @@ To build and run this project:
    > **Note:**
    > On Windows using MinGW, CMake may default to `nmake`. To avoid this:
 
-   ```bash
-   cmake -S . -B build -G "MinGW MakeFiles" credit to [This Stack OverFlow Post](https://stackoverflow.com/questions/69338088/error-while-configuring-cmake-project-running-nmake-failed)
-   ```
+
+ ```bash
+ cmake -S . -B build -G "MinGW MakeFiles"
+ ```
+ > *Credit to [this Stack Overflow post](https://stackoverflow.com/questions/69338088/error-while-configuring-cmake-project-running-nmake-failed).*
+
 
 3. Build the project:
 
