@@ -98,6 +98,7 @@ This program uses `orderbook.cpp` and other components to:
 * Validate the orders
 * Process them in a multithreaded environment
 
+Note whenever you rerun the main executable be sure to delete the output.txt otherwise you won't see the output of the trades when you make changes to data.txt
 ---
 
 ## Project Structure
