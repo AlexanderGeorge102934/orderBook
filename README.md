@@ -32,7 +32,7 @@ To build and run this project:
 
 ---
 
-## 🛠️ Build Environment
+## Build Environment
 
 * **OS:** Windows (MinGW)
 * **Compiler:** GCC
@@ -41,7 +41,7 @@ To build and run this project:
 
 ---
 
-## 🏗️ Build Instructions
+## Build Instructions
 
 1. Navigate to your project root directory.
 
@@ -66,7 +66,7 @@ To build and run this project:
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 After building:
 
