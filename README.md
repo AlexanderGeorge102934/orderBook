@@ -1,6 +1,6 @@
 ---
 
-# Order Book (Market & Limit Orders)
+# Order Book 
 
 Implementation of an order book I made that supports both **Market Orders** and **Limit Orders**. Orders are pre-processed before insertion (Only if Limit), and any remaining limit orders are stored in the order book for future matching.
 
