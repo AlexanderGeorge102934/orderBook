@@ -56,7 +56,7 @@ To build and run this project:
 
 
    ```bash
-   cmake -S . -B build -G "MinGW MakeFiles"
+   cmake -S . -B build -G "MinGW Makefiles"
    ```
    > *Credit to [this Stack Overflow post](https://stackoverflow.com/questions/69338088/error-while-configuring-cmake-project-running-nmake-failed).*
 
