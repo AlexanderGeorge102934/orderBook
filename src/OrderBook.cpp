@@ -6,7 +6,7 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
     // Go through each order at each best price and fill each order and subtract their quantity from the market order
     for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
 
-        Price currentPrice = it->first;
+        Price currentPrice {it->first};
 
         // Limit order price constraint check
         // Gauranteed to match the best price but not the worst price so you need this check here 
@@ -24,9 +24,9 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
         
         // Go through the map at each price with the value being all the orders FIFO at that price
         for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
-            OrderPointer& currentOrder = *orderIt;
+            OrderPointer& currentOrder {*orderIt};
 
-            Quantity quantityFilled = std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity());
+            Quantity quantityFilled {std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity())};
             
             incomingOrder->fill(quantityFilled);
             currentOrder->fill(quantityFilled);
@@ -90,11 +90,11 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
 {
     // TODO Find a way to better optimize the code (First see how the compiler compiles and if it doesn't optimize then you do it 
     // First determine the side of the order 
-    Side incomingOrderSide = incomingOrder->getSide();
+    Side incomingOrderSide {incomingOrder->getSide()};
 
     if(incomingOrderSide == Side::Buy){
             
-        Quantity quantityOfAsks = getQuantityOfAsks(); 
+        Quantity quantityOfAsks {getQuantityOfAsks()};
         
         // If market order check to see if the quantity can be filled or FOK 
         // Inherintly checks that the orderbook isn't empty  
@@ -108,7 +108,7 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
             return;
         }
         
-        const Price* bestAsk = getBestAsk();
+        const Price* bestAsk {getBestAsk()};
 
         // If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
         if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
@@ -127,7 +127,7 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
             
     if(incomingOrderSide == Side::Sell){
         
-        Quantity quantityOfBids = getQuantityOfBids();
+        Quantity quantityOfBids {getQuantityOfBids()};
 
         // If the order type is market check to see if total quantity can be filled otherwise FOK
         // Inherintly checks that the order book isn't empty 
@@ -142,7 +142,7 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
 
         }
         
-        const Price* bestBid = getBestBid();
+        const Price* bestBid {getBestBid()};
 
         // If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
         if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
@@ -166,13 +166,13 @@ void OrderBook::cancelOrder(const OrderId& orderId) {
         throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
     }
 
-    const OrderEntry& orderEntry = it->second;
-    const OrderPointer& orderPointer = orderEntry.order_;
+    const OrderEntry& orderEntry {it->second};
+    const OrderPointer& orderPointer {orderEntry.order_};
     const auto& location = orderEntry.location_;
 
-    const Side side = orderPointer->getSide();
-    const Price price = orderPointer->getPrice();
-    const Quantity quantity = orderPointer->getRemainingQuantity();
+    const Side side {orderPointer->getSide()};
+    const Price price {orderPointer->getPrice()};
+    const Quantity quantity {orderPointer->getRemainingQuantity()};
 
     if (side == Side::Buy) {
         bids_[price].erase(location);
@@ -197,16 +197,17 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
         throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
     }
     
-    OrderEntry orderEntry = it->second;
+    OrderEntry orderEntry {it->second};
 
-    OrderPointer& orderPointer = orderEntry.order_; 
+    OrderPointer& orderPointer {orderEntry.order_};
 
-    Side side = orderPointer->getSide();
-    OrderType orderType = orderPointer->getOrderType();
+    Side side{orderPointer->getSide()};
+    OrderType orderType {orderPointer->getOrderType()};
 
     cancelOrder(orderId);
 
-    OrderPointer newOrderPointer = std::make_shared<Order>(side, price, orderId, orderType, quantity, quantity);
+    OrderPointer newOrderPointer {std::make_shared<Order>(side, price, orderId, orderType, quantity, quantity)};
+    
 
     processOrder(newOrderPointer);
 
