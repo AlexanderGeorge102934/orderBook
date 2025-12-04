@@ -187,7 +187,7 @@ void orderBookProcessing(Queues& queues){
 
     for(const auto& trade: orderBook.getTrades()){
         std::cout << "Trade " << trade.getTradeId() << " has a quantity of " << trade.getQuantity() << " for a price of " << trade.getPrice() 
-                << ". The seller order id is " << trade.getSellOrderId() << " and the buyer orderId is " << trade.getBuyOrderId() << "\n";
+                << ". The Maker order id is " << trade.getMakerOrderId() << " and the Taker orderId is " << trade.getTakerOrderId() << "\n";
     }
 
 
