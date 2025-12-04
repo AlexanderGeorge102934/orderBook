@@ -10,8 +10,8 @@ TEST(TradeTest, BasicInitialization) {
     Trade trade{TEST_TRADE_ID, TEST_ORDER_ID, TEST_ORDER_ID, 100, TEST_PRICE};
 
     EXPECT_EQ(trade.getTradeId(), TEST_TRADE_ID);
-    EXPECT_EQ(trade.getBuyOrderId(), TEST_ORDER_ID);
-    EXPECT_EQ(trade.getSellOrderId(), TEST_ORDER_ID);
+    EXPECT_EQ(trade.getTakerOrderId(), TEST_ORDER_ID);
+    EXPECT_EQ(trade.getMakerOrderId(), TEST_ORDER_ID);
     EXPECT_EQ(trade.getQuantity(), 100);
     EXPECT_EQ(trade.getPrice(), TEST_PRICE);
 }
