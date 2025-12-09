@@ -55,15 +55,19 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
             }
 
             if(currentOrder->isFilled()){
-                orderIt = orderList.erase(orderIt);
+                // Remove from the per-price list and also erase the order registry to avoid leaving a stale entry.
+                OrderId filledOrderId = currentOrder->getOrderId();
+                orderIt = orderList.erase(orderIt);        // erase returns iterator to next element
+                orders_.erase(filledOrderId);              // remove entry from orders_
             }
+            // No need for else statement. If else then the for loop takes care of situation where incoming order got filled before current
         
-        }
+        } // Inner for loop 
 
         if(orderList.empty()){
             it = orderMap.erase(it);
         }
-
+        // No need for else statement. If else then the for loop takes care of situation where incoming order got filled before orderlist was empty 
     }
 }
 
@@ -217,4 +221,5 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
 
 
 }
+
 
