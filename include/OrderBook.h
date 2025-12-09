@@ -23,7 +23,7 @@ class OrderBook{
 	private: 
         
 		Trades trades_;
-    	TradeId nextTradeId{1};
+    	TradeId nextTradeId{1}; // For simplicity trade ids will start from 1 
 
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
 		// ** Ask need to be in order from least to greatest representing the best asks ** //
@@ -73,5 +73,6 @@ class OrderBook{
 
 		void cancelOrder(const OrderId& orderId);
 };	
+
 
 #endif 
