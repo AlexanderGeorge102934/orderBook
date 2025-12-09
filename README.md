@@ -34,7 +34,7 @@ To build and run this project:
 
 ## Build Environment
 
-* **OS:** Windows 
+* **OS:** Windows 11 
 * **Compiler:** GCC port from MinGW
 * **C++ Version:** C++20
 * **Others:** macOS/Linux should work using system default compilers.
