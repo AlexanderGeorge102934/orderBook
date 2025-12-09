@@ -24,9 +24,9 @@ Implementation of an order book I made that supports both **Market Orders** and 
 ## Prerequisites
 
 To build and run this project:
-
-1. Clone the [GoogleTest repository](https://github.com/google/googletest).
-2. Place the repository inside your project directory (e.g., `external/googletests`).
+1. Install Cmake (Minimum Ver. 3.14)
+2. Clone the [GoogleTest repository](https://github.com/google/googletest).
+3. Place the repository inside your project directory (e.g., `external/googletests`).
 
 > ⚠️ If you change the folder location, make sure to update the path in the root `CMakeLists.txt` using `add_subdirectory`.
 
