@@ -51,7 +51,7 @@ TEST_F(OrderBookTest, CancelOrderRemovesOrder) {
     auto order = makeOrder(Side::Buy, 120, 20);
     orderBook.processOrder(order);
 
-    EXPECT_NE(orderBook.getBestBid(), nullptr);
+    EXPECT_EQ(*orderBook.getBestBid(), 120);
     EXPECT_EQ(orderBook.getQuantityOfBids(), 20);
 
     orderBook.cancelOrder(order->getOrderId());
@@ -106,7 +106,7 @@ TEST_F(OrderBookTest, CancelNonexistentOrderThrows) {
 
 TEST_F(OrderBookTest, ModifyNonexistentOrderThrows) {
     EXPECT_THROW(orderBook.modifyOrder(9999, 10, 100), std::runtime_error);
-}
+} 
 
 TEST_F(OrderBookTest, OrderFillReducesQuantity) {
     auto sellOrder = makeOrder(Side::Sell, 100, 10);
