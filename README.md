@@ -41,6 +41,12 @@ To build and run this project:
 
 ---
 
+---
+
+## Tools
+
+* **Profiler:** perf 6.8.12
+
 ## Build Instructions
 
 1. Go to your project root directory.
