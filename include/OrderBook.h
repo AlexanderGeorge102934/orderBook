@@ -21,9 +21,15 @@
 
 class OrderBook{
 	private: 
-        
+		// Putting how much trades I expect to reserve space and reduce overhead of mem alloc
+		// For simplicity it is hardcoded but I will create a constructor that
+		// Calculates how much mem to alloc based on expected number of orders/hardware of computer
+       		static constexpr size_t EXPECTED_ORDERS = 100'000'000;
+	        static constexpr size_t EXPECTED_TRADES = 100'000'000;
+		static constexpr size_t EXPECTED_ORDERS_PER_PRICE = 100;	
+
 		Trades trades_;
-    	TradeId nextTradeId{1}; // For simplicity trade ids will start from 1 
+    		TradeId nextTradeId; // For simplicity trade ids will start from 1 
 
 		// ** Bids need to be in order from greatest to least representing the best bids ** //
 		// ** Ask need to be in order from least to greatest representing the best asks ** //
@@ -31,8 +37,8 @@ class OrderBook{
 		std::map<Price, OrderPointers, std::less<Price>> asks_;
 		// https://stackoverflow.com/questions/78518484/seamlessly-using-maps-with-different-comparators
 
-		Quantity quantityOfBids_{};
-		Quantity quantityOfAsks_{};
+		Quantity quantityOfBids_;
+		Quantity quantityOfAsks_;
 
 		struct OrderEntry{
 			OrderPointer order_ { nullptr };
@@ -48,7 +54,18 @@ class OrderBook{
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
 	public:
-
+		OrderBook()
+		: trades_{}
+		, nextTradeId{1}
+		, bids_{}
+		, asks_{}
+		, quantityOfBids_{}
+		, quantityOfAsks_{}
+		, orders_{}
+		{
+			trades_.reserve(EXPECTED_TRADES);
+			orders_.reserve(EXPECTED_ORDERS);
+		}
 		[[nodiscard]] const Price* getBestBid() const { 	
 			if(!bids_.empty()){ 
 				return &bids_.begin()->first;
