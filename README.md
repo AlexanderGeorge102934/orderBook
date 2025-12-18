@@ -57,6 +57,11 @@ To build and run this project:
    cmake -S . -B build
    ```
 
+   > **For profiling** 
+   ```bash
+   cmake -S . -B build-perf -DCMAKE_BUILD_TYPE=RelWithDebInfo
+   ```
+
    > **Note:**
    > On Windows using MinGW, CMake may default to `nmake`. To avoid this:
 
