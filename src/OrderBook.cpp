@@ -73,10 +73,10 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 template<typename OrderMap>
 void OrderBook::addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder){
 
-	OrderPointers& orderList = orderMap[incomingOrder->getPrice()];
+	OrderPointers& orderList {orderMap[incomingOrder->getPrice()]};
 	orderList.push_back(incomingOrder);
 
-	const auto& it = std::prev(orderList.end());// Points to the actual last element and not the end cuz of prev
+	const auto& it {std::prev(orderList.end())};// Points to the actual last element and not the end cuz of prev
 
 	OrderEntry orderEntry;
 	orderEntry.order_ = incomingOrder;
