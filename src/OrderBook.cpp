@@ -26,7 +26,7 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 		OrderPointers& orderList = it->second;
 
 		// Go through the list of Order Ptrs at each price in the map with the value being all the orders FIFO at that price
-		for (auto orderIt = orderList.begin(); orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
+		for (auto orderIt {orderList.begin()}; orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
 			OrderPointer& currentOrder {*orderIt};
 
 			Quantity quantityFilled {std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity())};
