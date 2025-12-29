@@ -52,6 +52,10 @@ class OrderBook{
 		mutable std::mutex mut_;
 		std::condition_variable dataCondition_;
 
+		// These functions are to be used by Modify Order Public Member Function only, because you cannot have a self deadlock since modify order is = cancel+process
+		void processOrderPrivate(const OrderPointer& incomingOrder);
+		void cancelOrderPrivate(const OrderId& orderId);
+
 		// Custom Template Helpers 
 		template<typename OrderMap>	       
 		void fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder);
@@ -98,7 +102,6 @@ class OrderBook{
         
 		void processOrder(const OrderPointer& incomingOrder);
 		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
-
 		void cancelOrder(const OrderId& orderId);
 
 		// Deleted Constructors
@@ -114,3 +117,4 @@ class OrderBook{
 
 
 #endif 
+
