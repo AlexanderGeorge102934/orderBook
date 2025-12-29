@@ -208,7 +208,7 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
 	if(it == orders_.end()){
 	//	Uncomment this and comment out the return value if you want to test  
 	//	throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
-		return
+		return;
 	}
 
 	OrderEntry orderEntry {it->second};
@@ -226,5 +226,6 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
 
 
 }
+
 
 
