@@ -49,14 +49,15 @@ class OrderBook{
 
 		std::unordered_map<OrderId, OrderEntry> orders_;
 
+		mutable std::mutex mut_;
+		std::condition_variable dataCondition_;
+
 		template<typename OrderMap>	       
 		void fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
 		template<typename OrderMap>
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
-		mutable std::mutex mut_;
-		std::condition_variable dataCondition_;
 
 	public:
 		OrderBook()
@@ -67,6 +68,8 @@ class OrderBook{
 		, quantityOfBids_{}
 		, quantityOfAsks_{}
 		, orders_{}
+		, mut_{}
+		, dataCondition_{}
 		{
 			trades_.reserve(EXPECTED_TRADES);
 			orders_.reserve(EXPECTED_ORDERS);
