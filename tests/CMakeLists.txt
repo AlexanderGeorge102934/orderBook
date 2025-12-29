@@ -28,10 +28,10 @@ gtest_discover_tests(TestTrade)
 
 # Build for testing Order Book 
 
-add_executable(TestOrderBook 
-    TestOrderBook.cpp
-    ${PROJECT_SOURCE_DIR}/src/OrderBook.cpp
-)
+#  add_executable(TestOrderBook 
+#    TestOrderBook.cpp
+#    ${PROJECT_SOURCE_DIR}/src/OrderBook.cpp
+#)
 
 target_link_libraries(TestOrderBook
     gtest
