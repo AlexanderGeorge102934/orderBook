@@ -9,7 +9,7 @@
 void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder)
 { 
 	// Go through each order at each best price and fill each order and subtract their quantity from the market order
-	for (auto it = orderMap.begin(); it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
+	for (auto it {orderMap.begin()}; it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
 
 		Price currentPrice {it->first};
 
@@ -23,7 +23,7 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 		}
 
 
-		OrderPointers& orderList = it->second;
+		OrderPointers& orderList {it->second};
 
 		// Go through the list of Order Ptrs at each price in the map with the value being all the orders FIFO at that price
 		for (auto orderIt {orderList.begin()}; orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
