@@ -97,6 +97,7 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
 {
 	// TODO Find a way to better optimize the code (First see how the compiler compiles and if it doesn't optimize then you do it 
 	// First determine the side of the order 
+	std::lock_guard<std::mutex> lockGuard{mut_};
 	Side incomingOrderSide {incomingOrder->getSide()};
 
 	if(incomingOrderSide == Side::Buy){
@@ -168,9 +169,12 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
 }
 
 void OrderBook::cancelOrder(const OrderId& orderId) {
+	std::lock_guard<std::mutex> lockGuard{mut_};
 	const auto it = orders_.find(orderId);
 	if (it == orders_.end()) {
-		throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
+	//	Uncomment this and comment out the return value if you want to test  
+	//	throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
+		return;
 	}
 
 	const OrderEntry& orderEntry {it->second};
@@ -199,9 +203,12 @@ void OrderBook::cancelOrder(const OrderId& orderId) {
 }
 
 void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price){
+	std::lock_guard<std::mutex> lockGuard{mut_};
 	const auto it = orders_.find(orderId);
 	if(it == orders_.end()){
-		throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
+	//	Uncomment this and comment out the return value if you want to test  
+	//	throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
+		return
 	}
 
 	OrderEntry orderEntry {it->second};
@@ -214,7 +221,6 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
 	cancelOrder(orderId);
 
 	OrderPointer newOrderPointer {std::make_shared<Order>(side, price, orderId, orderType, quantity, quantity)};
-
 
 	processOrder(newOrderPointer);
 
