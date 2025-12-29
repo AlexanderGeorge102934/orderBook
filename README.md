@@ -82,7 +82,7 @@ To build and run this project:
 
 ## Running Tests
 
-⚠️ Before building and executing the test file (TestOrderBook.exe), you must move the "Simple Getters" member functions labeled in the OrderBook class from private to public to test the class.
+⚠️ Before building and executing the test file (TestOrderBook.exe), you must move the "Simple Getters" member functions labeled in the OrderBook class from private to public to test the class AND go to projectdir/tests and uncomment the last portion of the CMakeLists.txt file 
 
 After building:
 
