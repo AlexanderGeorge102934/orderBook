@@ -52,28 +52,14 @@ class OrderBook{
 		mutable std::mutex mut_;
 		std::condition_variable dataCondition_;
 
+		// Custom Template Helpers 
 		template<typename OrderMap>	       
 		void fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
 		template<typename OrderMap>
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
 
-
-	public:
-		OrderBook()
-		: trades_{}
-		, nextTradeId{1}
-		, bids_{}
-		, asks_{}
-		, quantityOfBids_{}
-		, quantityOfAsks_{}
-		, orders_{}
-		, mut_{}
-		, dataCondition_{}
-		{
-			trades_.reserve(EXPECTED_TRADES);
-			orders_.reserve(EXPECTED_ORDERS);
-		}
+		// Simple Getters
 		[[nodiscard]] const Price* getBestBid() const { 	
 			if(!bids_.empty()){ 
 				return &bids_.begin()->first;
@@ -92,6 +78,23 @@ class OrderBook{
 		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
 		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
 		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
+
+
+	public:
+		OrderBook()
+		: trades_{}
+		, nextTradeId{1}
+		, bids_{}
+		, asks_{}
+		, quantityOfBids_{}
+		, quantityOfAsks_{}
+		, orders_{}
+		, mut_{}
+		, dataCondition_{}
+		{
+			trades_.reserve(EXPECTED_TRADES);
+			orders_.reserve(EXPECTED_ORDERS);
+		}
         
 		void processOrder(const OrderPointer& incomingOrder);
 		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
