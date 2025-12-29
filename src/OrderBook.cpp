@@ -95,7 +95,6 @@ void OrderBook::addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& inco
 
 void OrderBook::processOrder(const OrderPointer& incomingOrder)
 {
-	// TODO Find a way to better optimize the code (First see how the compiler compiles and if it doesn't optimize then you do it 
 	// First determine the side of the order 
 	std::lock_guard<std::mutex> lockGuard{mut_};
 	Side incomingOrderSide {incomingOrder->getSide()};
@@ -202,6 +201,113 @@ void OrderBook::cancelOrder(const OrderId& orderId) {
 	orders_.erase(it);
 }
 
+// Helper for Modify Order
+void OrderBook::processOrderPrivate(const OrderPointer& incomingOrder)
+{
+	// First determine the side of the order 
+	Side incomingOrderSide {incomingOrder->getSide()};
+
+	if(incomingOrderSide == Side::Buy){
+
+		Quantity quantityOfAsks {getQuantityOfAsks()};
+
+		// If market order check to see if the quantity can be filled or FOK 
+		// Inherintly checks that the orderbook isn't empty  
+		if(incomingOrder->getOrderType() == OrderType::Market){
+
+			if( incomingOrder->getRemainingQuantity() <= quantityOfAsks){
+				fillOrders(asks_, incomingOrder);
+				return;
+			}
+
+			return;
+		}
+
+		const Price* bestAsk {getBestAsk()};
+
+		// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
+		if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
+			addOrderToOrderBook(bids_, incomingOrder);
+			return;
+		}
+
+		// Do matching logic here 
+		fillOrders(asks_, incomingOrder);
+		if(!incomingOrder->isFilled()){
+			addOrderToOrderBook(bids_, incomingOrder);
+		}
+
+	}
+
+
+	if(incomingOrderSide == Side::Sell){
+
+		Quantity quantityOfBids {getQuantityOfBids()};
+
+		// If the order type is market check to see if total quantity can be filled otherwise FOK
+		// Inherintly checks that the order book isn't empty 
+		if(incomingOrder->getOrderType() == OrderType::Market){
+
+			if( incomingOrder->getRemainingQuantity() <= quantityOfBids){
+				fillOrders(bids_, incomingOrder);
+				return;
+			}
+
+			return;
+
+		}
+
+		const Price* bestBid {getBestBid()};
+
+		// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
+		if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
+			addOrderToOrderBook(asks_, incomingOrder);
+			return;
+		}
+
+		// Do matching logic here 
+		fillOrders(bids_, incomingOrder);
+		if(!incomingOrder->isFilled()){
+			addOrderToOrderBook(asks_, incomingOrder);
+		}    
+
+	}
+
+}
+
+// Helper for Modify Order
+void OrderBook::cancelOrderPrivate(const OrderId& orderId) {
+	const auto it = orders_.find(orderId);
+	if (it == orders_.end()) {
+		return;
+	}
+
+	const OrderEntry& orderEntry {it->second};
+	const OrderPointer& orderPointer {orderEntry.order_};
+	const auto& location = orderEntry.location_;
+
+	const Side side {orderPointer->getSide()};
+	const Price price {orderPointer->getPrice()};
+	const Quantity quantity {orderPointer->getRemainingQuantity()};
+
+	if (side == Side::Buy) {
+		bids_[price].erase(location);
+		quantityOfBids_ -= quantity;
+		if (bids_[price].empty()) {
+			bids_.erase(price);
+		}
+	} else {
+		asks_[price].erase(location);
+		quantityOfAsks_ -= quantity;
+		if (asks_[price].empty()) {
+			asks_.erase(price);
+		}
+	}
+
+	orders_.erase(it);
+}
+
+
 void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price){
 	std::lock_guard<std::mutex> lockGuard{mut_};
 	const auto it = orders_.find(orderId);
@@ -218,14 +324,15 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
 	Side side{orderPointer->getSide()};
 	OrderType orderType {orderPointer->getOrderType()};
 
-	cancelOrder(orderId);
+	cancelOrderPrivate(orderId);
 
 	OrderPointer newOrderPointer {std::make_shared<Order>(side, price, orderId, orderType, quantity, quantity)};
 
-	processOrder(newOrderPointer);
+	processOrderPrivate(newOrderPointer);
 
 
 }
+
 
 
 
