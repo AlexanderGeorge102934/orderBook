@@ -97,6 +97,16 @@ class OrderBook{
 		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
 
 		void cancelOrder(const OrderId& orderId);
+
+		// Deleted Constructors
+
+		// No Copying 
+		OrderBook(const OrderBook& other) = delete;
+		OrderBook& operator=(const OrderBook& other) = delete;
+		
+		// No Moving 
+		OrderBook(OrderBook&& other) = delete;
+		OrderBook& operator=(OrderBook&& other) = delete;
 };	
 
 
