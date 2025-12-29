@@ -12,6 +12,8 @@
 #include <string>  
 #include <format>  
 #include <atomic> 
+#include <mutex>
+#include <condition_variable>
 
 #include "Order.h"
 #include "Using.h" 
@@ -52,6 +54,9 @@ class OrderBook{
 
 		template<typename OrderMap>
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
+
+		mutable std::mutex mut_;
+		std::condition_variable dataCondition_;
 
 	public:
 		OrderBook()
