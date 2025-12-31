@@ -16,7 +16,7 @@ Implementation of an order book I made that supports both **Market Orders** and 
   * **Market Orders:** Treated as *fill or kill* — they must be completely filled immediately or they are discarded.
 * Pre-processes and matches orders before inserting into the book.
 * Stores unmatched **Limit** orders in an internal order book.
-* Multithreaded processing of orders from a text file.
+* Supports multithreading 
 * Unit tests included for core components.
 
 ---
