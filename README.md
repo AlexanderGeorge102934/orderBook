@@ -32,21 +32,13 @@ To build and run this project:
 
 ---
 
-## Build Environment
-
-* **OS:** Windows 11 
-* **Compiler:** GCC port from MinGW
-* **C++ Version:** C++20
-* **Others:** macOS/Linux should work using system default compilers.
-
----
-
----
-
-## Tools
+## Tools Used
 
 * **Profiler:** perf 6.8.12
+* **Virtual Machine:** Virtual Box 7.2.2 (Used because I don't have Linux OS to use perf)
+* **Compiler:** GNU Compiler Collection 
 
+---
 ## Build Instructions
 
 1. Go to your project root directory.
