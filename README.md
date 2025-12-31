@@ -16,7 +16,7 @@ Implementation of an order book I made that supports both **Market Orders** and 
   * **Market Orders:** Treated as *fill or kill* — they must be completely filled immediately or they are discarded.
 * Pre-processes and matches orders before inserting into the book.
 * Stores unmatched **Limit** orders in an internal order book.
-* Multithreaded processing of orders from a text file.
+* Supports multithreading 
 * Unit tests included for core components.
 
 ---
@@ -32,15 +32,13 @@ To build and run this project:
 
 ---
 
-## Build Environment
+## Tools Used
 
-* **OS:** Windows 11 
-* **Compiler:** GCC port from MinGW
-* **C++ Version:** C++20
-* **Others:** macOS/Linux should work using system default compilers.
+* **Profiler:** perf 6.8.12
+* **Virtual Machine:** Virtual Box 7.2.2 (Used because I don't have Linux OS to use perf)
+* **Compiler:** GNU Compiler Collection 
 
 ---
-
 ## Build Instructions
 
 1. Go to your project root directory.
@@ -49,6 +47,11 @@ To build and run this project:
 
    ```bash
    cmake -S . -B build
+   ```
+
+   > **For profiling** 
+   ```bash
+   cmake -S . -B build-perf -DCMAKE_BUILD_TYPE=RelWithDebInfo
    ```
 
    > **Note:**
@@ -70,6 +73,8 @@ To build and run this project:
 ---
 
 ## Running Tests
+
+⚠️ Before building and executing the test file (TestOrderBook.exe), you must move the "Simple Getters" member functions labeled in the OrderBook class from private to public to test the class AND go to projectdir/tests and uncomment the last portion of the CMakeLists.txt file AND follow the instructions of what to comment out in projectdir/src/OrderBook.cpp 
 
 After building:
 
