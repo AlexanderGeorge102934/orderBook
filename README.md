@@ -5,7 +5,7 @@
 Implementation of an order book I made that supports both **Market Orders** and **Limit Orders**. Orders are pre-processed before insertion (Only if Limit), and any remaining limit orders are stored in the order book for future matching.
 
 > **Inspiration:**
-> This project is inspired by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master)
+> This project takes structural inspiration by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master) while implementing an original order book logic and multithreaded design. 
 
 ---
 
