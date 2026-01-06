@@ -35,7 +35,7 @@ class ThreadSafeQueue{
 
         void push(T newValue){
             std::lock_guard<std::mutex> lockGuard(mut_);
-            dataQueue.push(std::move(newValue));
+            dataQueue_.push(std::move(newValue));
             dataCondition_.notify_one(); // Note to self: Need only one waiting thread needs to be woken up not all 
         }
 
