@@ -21,7 +21,7 @@ class ThreadSafeQueue{
 
     public:
 
-        // Rule of Zero 
+        // Non-copyable, non-movable
         ThreadSafeQueue() = default;
         ~ThreadSafeQueue() = default;
 
@@ -34,7 +34,7 @@ class ThreadSafeQueue{
         ThreadSafeQueue& operator=(ThreadSafeQueue&& other) = delete;
 
         void push(T newValue){
-            std::lock_guard<std::mutex> lockGaurd(mut_);
+            std::lock_guard<std::mutex> lockGuard(mut_);
             dataQueue.push(std::move(newValue));
             dataCondition_.notify_one(); // Note to self: Need only one waiting thread needs to be woken up not all 
         }
@@ -44,7 +44,7 @@ class ThreadSafeQueue{
             dataCondition_.wait(uniqueLock, 
                 [this]
                     {
-                        !dataQueue_.empty();
+                        return !dataQueue_.empty();
                     }
             );
 
@@ -53,46 +53,48 @@ class ThreadSafeQueue{
         }
 
         std::shared_ptr<T> waitAndPop(){ // If you want to return a value instead same as above really
-            std::unique_lock<std::mutex> lk(mut);
-            data_cond.wait(lk, 
+            std::unique_lock<std::mutex> lk(mut_);
+            dataCondition_.wait(lk, 
                 [this]
                     { 
-                        return !data_queue.empty(); 
+                        return !dataQueue_.empty(); 
                     }
                 );
             std::shared_ptr<T> result(
-                std::make_shared<T>(std::move( data_queue.front() ))
+                std::make_shared<T>(std::move( dataQueue_.front() ))
             );
 
-            data_queue.pop();
+            dataQueue_.pop();
             return result;
         }
 
         bool tryPop(T& value){
-            std::lock_guard<std::mutex> lockGaurd(mut_);
+            std::lock_guard<std::mutex> lockGuard(mut_);
             if(dataQueue_.empty()){
                 return false;
             }
             value = std::move(dataQueue_.front());
             dataQueue_.pop();
+            return true;
         }
 
         std::shared_ptr<T> tryPop()
         {
             std::lock_guard<std::mutex> lk(mut_);
-            if (data_queue.empty()){
+            if (dataQueue_.empty()){
                 return std::shared_ptr<T>();
             }
             std::shared_ptr<T> result(
-                std::make_shared<T>(std::move( data_queue.front() ))
+                std::make_shared<T>(std::move( dataQueue_.front() ))
             );
-            data_queue.pop();
+            dataQueue_.pop();
             return result;
         }
 
         bool empty() const {
-            std::lock_guard<std::mutex> lockGaurd(mut_);
+            std::lock_guard<std::mutex> lockGuard(mut_);
             return dataQueue_.empty();
         }
 };
+
 #endif
