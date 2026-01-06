@@ -109,6 +109,9 @@ This program uses `orderbook.cpp` and other components to:
 
 ```
 projectdir/
+├── include/
+│   ├── OrderBook.h
+│   └── ...
 ├── src/
 │   ├── main.cpp
 │   └── ...
