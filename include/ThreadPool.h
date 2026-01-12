@@ -27,17 +27,21 @@ class ThreadPool{
         }
 
     public:
-        ThreadPool()
+        ThreadPool(size_t threadCount)
         : done_{false}
         , workQueue_{}
-        , threads_{}
+        , threads_{
+            [&threadCount]{
+            std::vector<std::thread> temp{};
+            temp.reserve(threadCount);
+            return temp;}()
+        }
         , joinThreads_{threads_}
         {
-            size_t const threadCount = std::thread::hardware_concurrency(); //Used size_t rather than unsigned 
             try
             {
                 for(size_t i = 0; i<threadCount; ++i){
-                    threads_.push_back(std::thread(&ThreadPool::workerThread, this));
+                    threads_.emplace_back(&ThreadPool::workerThread, this);
                 }
             }
             catch(...)
