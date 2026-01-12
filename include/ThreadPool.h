@@ -10,7 +10,7 @@ class ThreadPool{
 
     private:
         std::atomic_bool done_;
-        ThreadSafeQueue<std::function<void()>> workQueue_; // This might need to change to something different in terms of void and no param
+        ThreadSafeQueue<std::function<void()>>& workQueue_; // This might need to change to something different in terms of void and no param
         std::vector<std::thread> threads_;
         JoinThreads joinThreads_;
 
@@ -27,9 +27,9 @@ class ThreadPool{
         }
 
     public:
-        ThreadPool(size_t threadCount)
+        ThreadPool(ThreadSafeQueue<std::function<void()>>& workQueue, size_t threadCount)
         : done_{false}
-        , workQueue_{}
+        , workQueue_{workQueue}
         , threads_{
             [&threadCount]{
             std::vector<std::thread> temp{};
@@ -40,7 +40,7 @@ class ThreadPool{
         {
             try
             {
-                for(size_t i = 0; i<threadCount; ++i){
+                for(size_t i {0}; i<threadCount; ++i){
                     threads_.emplace_back(&ThreadPool::workerThread, this);
                 }
             }
