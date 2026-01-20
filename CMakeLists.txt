@@ -7,8 +7,9 @@ project(MyOrderBookProject)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Header files 
+# Directories 
 include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/external)
 
 # Subdirectories 
 add_subdirectory(src) # Compile the cmake from the src dir as well 
