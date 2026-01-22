@@ -14,6 +14,7 @@
 #include <atomic> 
 #include <mutex>
 #include <condition_variable>
+#include <memory_resource>
 
 #include "Order.h"
 #include "Using.h" 
@@ -23,31 +24,26 @@
 
 class OrderBook{
 	private: 
-		// Putting how much trades I expect to reserve space and reduce overhead of mem alloc
-		// For simplicity it is hardcoded but I will create a constructor that
-		// Calculates how much mem to alloc based on expected number of orders/hardware of computer
-       	static constexpr size_t EXPECTED_ORDERS = 100'000'000;
-	    static constexpr size_t EXPECTED_TRADES = 100'000'000;
-		static constexpr size_t EXPECTED_ORDERS_PER_PRICE = 100;	
+		// Preallocated mem
+		size_t bufferSize_;
+		std::unique_ptr<std::byte[]> rawMemory_;
+		std::pmr::monotonic_buffer_resource pool_;
 
-		Trades trades_;
-    	TradeId nextTradeId; // For simplicity trade ids will start from 1 
-
-		// ** Bids need to be in order from greatest to least representing the best bids ** //
-		// ** Ask need to be in order from least to greatest representing the best asks ** //
-		std::map<Price, OrderPointers, std::greater<Price>> bids_;
-		std::map<Price, OrderPointers, std::less<Price>> asks_;
-		// https://stackoverflow.com/questions/78518484/seamlessly-using-maps-with-different-comparators
-
-		Quantity quantityOfBids_;
-		Quantity quantityOfAsks_;
+		// Containers
+		std::pmr::vector<Trade> trades_;
+		std::pmr::map<Price, OrderPointers, std::greater<Price>> bids_; // greatest to smallest
+		std::pmr::map<Price, OrderPointers, std::less<Price>> asks_; // smallest to largest
 
 		struct OrderEntry{
 			OrderPointer order_ { nullptr };
 			OrderPointers::iterator location_;		
 		};
-
-		std::unordered_map<OrderId, OrderEntry> orders_;
+		std::pmr::unordered_map<OrderId, OrderEntry> orders_;
+		
+		// Numericals
+		TradeId nextTradeId; // For simplicity trade ids will start from 1 
+		Quantity quantityOfBids_;
+		Quantity quantityOfAsks_;
 
 		// Custom Template Helpers 
 		template<typename OrderMap>	       
@@ -74,26 +70,30 @@ class OrderBook{
 
 		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
 		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
-		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
 
 
 	public:
 		OrderBook()
-		: trades_{}
+		: bufferSize_ {1024 * 1024 * 1024} // 1 GB
+		, rawMemory_{std::make_unique<std::byte[]>(bufferSize_)}
+		, pool_{rawMemory_.get(), bufferSize_}
+		, trades_(&pool_)
+		, bids_{&pool_}
+		, asks_{&pool_}
+		, orders_{&pool_}
 		, nextTradeId{1}
-		, bids_{}
-		, asks_{}
 		, quantityOfBids_{}
 		, quantityOfAsks_{}
-		, orders_{}
 		{
-			trades_.reserve(EXPECTED_TRADES);
-			orders_.reserve(EXPECTED_ORDERS);
+			trades_.reserve(100'000);
+			orders_.reserve(100'000);
 		}
         
 		void processOrder(const OrderPointer& incomingOrder);
 		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
 		void cancelOrder(const OrderId& orderId);
+
+		[[nodiscard]] inline const auto& getTrades() const noexcept {return trades_; }
 
 		// Deleted Constructors
 
