@@ -14,7 +14,6 @@
 #include <atomic> 
 #include <mutex>
 #include <condition_variable>
-#include <memory_resource>
 
 #include "Order.h"
 #include "Using.h" 
@@ -30,7 +29,7 @@ class OrderBook{
 		std::pmr::monotonic_buffer_resource pool_;
 
 		// Containers
-		std::pmr::vector<Trade> trades_;
+		Trades trades_;
 		std::pmr::map<Price, OrderPointers, std::greater<Price>> bids_; // greatest to smallest
 		std::pmr::map<Price, OrderPointers, std::less<Price>> asks_; // smallest to largest
 
@@ -93,7 +92,7 @@ class OrderBook{
 		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
 		void cancelOrder(const OrderId& orderId);
 
-		[[nodiscard]] inline const auto& getTrades() const noexcept {return trades_; }
+		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
 
 		// Deleted Constructors
 
