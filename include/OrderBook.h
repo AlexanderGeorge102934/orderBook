@@ -20,6 +20,7 @@
 #include "OrderType.h"
 #include "Side.h"
 #include "Containers.h"
+#include "OrderState.h"
 
 class OrderBook{
 	private: 
@@ -38,9 +39,20 @@ class OrderBook{
 			OrderPointers::iterator location_;		
 		};
 		std::pmr::unordered_map<OrderId, OrderEntry> orders_;
-		
+
+		struct OrderStatus
+		{
+			Price price {};
+			OrderType type {};
+			Side side {};
+			OrderState state {OrderState::Processing};
+			Quantity remainingQuantity {};
+			Quantity filledQuantity {0};
+		};
+		std::pmr::unordered_map<OrderId, OrderStatus> statusCache_;
+
 		// Numericals
-		TradeId nextTradeId; // For simplicity trade ids will start from 1 
+		TradeId nextTradeId_; // For simplicity trade ids will start from 1 
 		Quantity quantityOfBids_;
 		Quantity quantityOfAsks_;
 
@@ -50,27 +62,7 @@ class OrderBook{
 
 		template<typename OrderMap>
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
-
-		// Simple Getters
-		[[nodiscard]] const Price* getBestBid() const { 	
-			if(!bids_.empty()){ 
-				return &bids_.begin()->first;
-			}		
-			return nullptr;
-		}
-
-		[[nodiscard]] const Price* getBestAsk() const { 
-			if(!asks_.empty()){
-				return &asks_.begin()->first;
-			}	
-		
-			return nullptr;		
-		}
-
-		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
-		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
-
-
+	
 	public:
 		OrderBook()
 		: bufferSize_ {1024 * 1024 * 1024} // 1 GB
@@ -80,7 +72,8 @@ class OrderBook{
 		, bids_{&pool_}
 		, asks_{&pool_}
 		, orders_{&pool_}
-		, nextTradeId{1}
+		, statusCache_{&pool_}
+		, nextTradeId_{1}
 		, quantityOfBids_{}
 		, quantityOfAsks_{}
 		{
@@ -88,13 +81,30 @@ class OrderBook{
 			orders_.reserve(100'000);
 		}
         
-		void processOrder(const OrderPointer& incomingOrder);
-		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
-		void cancelOrder(const OrderId& orderId);
-
+		bool processOrder(Order order); // Later down the road have it return the order id 
+		bool modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
+		bool cancelOrder(const OrderId& orderId);
+		const OrderStatus reviewOrderStatus(const OrderId& orderId) const;
+		
 		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
+		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
+		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
 
-		// Deleted Constructors
+		// Public functions 
+		[[nodiscard]] const Price getBestBid() const { 	
+			if(!bids_.empty()){ 
+				return bids_.begin()->first;
+			}		
+			return 0;
+		}
+
+		[[nodiscard]] const Price getBestAsk() const { 
+			if(!asks_.empty()){
+				return asks_.begin()->first;
+			}	
+		
+			return 0;		
+		}
 
 		// No Copying 
 		OrderBook(const OrderBook& other) = delete;
@@ -103,6 +113,7 @@ class OrderBook{
 		// No Moving 
 		OrderBook(OrderBook&& other) = delete;
 		OrderBook& operator=(OrderBook&& other) = delete;
+
 };	
 
 
