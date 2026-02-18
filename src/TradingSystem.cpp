@@ -3,7 +3,7 @@
 void TradingSystem::startServer(){
 
     try{
-        uint16_t port {13};
+        uint16_t port {1030};
         boost::asio::io_context ioContext;
         tcp::acceptor acceptor{ioContext, tcp::endpoint(tcp::v4(), port)};
         for (;;)
