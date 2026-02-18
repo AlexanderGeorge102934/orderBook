@@ -47,6 +47,8 @@ void TradingSystem::startServer(){
 
 void TradingSystem::handleSequencing(std::string_view message) {
 
+    std::cout << "Sequencer got: " << message << "\n";
+
     // Chatted this since I don't know how to break up a string 
     // Not the most efficient use, since I'm copying and probably not using sso so I'm defeating he whole point of string view but oh well
     try {

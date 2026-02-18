@@ -12,7 +12,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/external)
 
 # Subdirectories 
-add_subdirectory(src) # Compile the cmake from the src dir as well 
+add_subdirectory(src)  
 add_subdirectory(external/googletest)
 enable_testing()
 add_subdirectory(tests)
