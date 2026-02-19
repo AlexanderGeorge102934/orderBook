@@ -81,10 +81,10 @@ class OrderBook{
 			orders_.reserve(100'000);
 		}
         
-		bool processOrder(Order order); // Later down the road have it return the order id 
-		bool modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
-		bool cancelOrder(const OrderId& orderId);
-		const OrderStatus reviewOrderStatus(const OrderId& orderId) const;
+		[[nodiscard]] bool processOrder(Order order); // Later down the road have it return the order id 
+		[[nodiscard]] bool modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
+		[[nodiscard]] bool cancelOrder(const OrderId& orderId);
+		[[nodiscard]] const OrderStatus reviewOrderStatus(const OrderId& orderId) const;
 		
 		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
 		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
