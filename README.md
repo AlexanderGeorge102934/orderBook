@@ -185,5 +185,3 @@ Key Takeaways from this project for me were understanding:
 This was a project I have been working on for quite some time and I'm happy to have done it. No one needs to go to this extent when building a project to learn something but if you want to learn from any of the topics that I mentioned in the key takeaways I would highly recommend it.
 
 ---
-
-**Is there anything else I can help you with to wrap up this project?**
