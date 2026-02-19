@@ -20,41 +20,41 @@
 #include "OrderType.h"
 #include "Side.h"
 #include "Containers.h"
+#include "OrderState.h"
 
 class OrderBook{
 	private: 
-		// Putting how much trades I expect to reserve space and reduce overhead of mem alloc
-		// For simplicity it is hardcoded but I will create a constructor that
-		// Calculates how much mem to alloc based on expected number of orders/hardware of computer
-       		static constexpr size_t EXPECTED_ORDERS = 100'000'000;
-	        static constexpr size_t EXPECTED_TRADES = 100'000'000;
-		static constexpr size_t EXPECTED_ORDERS_PER_PRICE = 100;	
+		// Preallocated mem
+		size_t bufferSize_;
+		std::unique_ptr<std::byte[]> rawMemory_;
+		std::pmr::monotonic_buffer_resource pool_;
 
+		// Containers
 		Trades trades_;
-    		TradeId nextTradeId; // For simplicity trade ids will start from 1 
-
-		// ** Bids need to be in order from greatest to least representing the best bids ** //
-		// ** Ask need to be in order from least to greatest representing the best asks ** //
-		std::map<Price, OrderPointers, std::greater<Price>> bids_;
-		std::map<Price, OrderPointers, std::less<Price>> asks_;
-		// https://stackoverflow.com/questions/78518484/seamlessly-using-maps-with-different-comparators
-
-		Quantity quantityOfBids_;
-		Quantity quantityOfAsks_;
+		std::pmr::map<Price, OrderPointers, std::greater<Price>> bids_; // greatest to smallest
+		std::pmr::map<Price, OrderPointers, std::less<Price>> asks_; // smallest to largest
 
 		struct OrderEntry{
 			OrderPointer order_ { nullptr };
 			OrderPointers::iterator location_;		
 		};
+		std::pmr::unordered_map<OrderId, OrderEntry> orders_;
 
-		std::unordered_map<OrderId, OrderEntry> orders_;
+		struct OrderStatus
+		{
+			Price price {};
+			OrderType type {};
+			Side side {};
+			OrderState state {OrderState::Processing};
+			Quantity remainingQuantity {};
+			Quantity filledQuantity {0};
+		};
+		std::pmr::unordered_map<OrderId, OrderStatus> statusCache_;
 
-		mutable std::mutex mut_;
-		std::condition_variable dataCondition_;
-
-		// These functions are to be used by Modify Order Public Member Function only, because you cannot have a self deadlock since modify order is = cancel+process
-		void processOrderPrivate(const OrderPointer& incomingOrder);
-		void cancelOrderPrivate(const OrderId& orderId);
+		// Numericals
+		TradeId nextTradeId_; // For simplicity trade ids will start from 1 
+		Quantity quantityOfBids_;
+		Quantity quantityOfAsks_;
 
 		// Custom Template Helpers 
 		template<typename OrderMap>	       
@@ -62,49 +62,49 @@ class OrderBook{
 
 		template<typename OrderMap>
 		void addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder);
-
-		// Simple Getters
-		[[nodiscard]] const Price* getBestBid() const { 	
-			if(!bids_.empty()){ 
-				return &bids_.begin()->first;
-			}		
-			return nullptr;
-		}
-
-		[[nodiscard]] const Price* getBestAsk() const { 
-			if(!asks_.empty()){
-				return &asks_.begin()->first;
-			}	
-		
-			return nullptr;		
-		}
-
-		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
-		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
-		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
-
-
+	
 	public:
 		OrderBook()
-		: trades_{}
-		, nextTradeId{1}
-		, bids_{}
-		, asks_{}
+		: bufferSize_ {1024 * 1024 * 1024} // 1 GB
+		, rawMemory_{std::make_unique<std::byte[]>(bufferSize_)}
+		, pool_{rawMemory_.get(), bufferSize_}
+		, trades_(&pool_)
+		, bids_{&pool_}
+		, asks_{&pool_}
+		, orders_{&pool_}
+		, statusCache_{&pool_}
+		, nextTradeId_{1}
 		, quantityOfBids_{}
 		, quantityOfAsks_{}
-		, orders_{}
-		, mut_{}
-		, dataCondition_{}
 		{
-			trades_.reserve(EXPECTED_TRADES);
-			orders_.reserve(EXPECTED_ORDERS);
+			trades_.reserve(100'000);
+			orders_.reserve(100'000);
 		}
         
-		void processOrder(const OrderPointer& incomingOrder);
-		void modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
-		void cancelOrder(const OrderId& orderId);
+		bool processOrder(Order order); // Later down the road have it return the order id 
+		bool modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price);
+		bool cancelOrder(const OrderId& orderId);
+		const OrderStatus reviewOrderStatus(const OrderId& orderId) const;
+		
+		[[nodiscard]] inline const Trades& getTrades() const noexcept {return trades_; }
+		[[nodiscard]] inline const Quantity& getQuantityOfAsks() const noexcept { return quantityOfAsks_; }
+		[[nodiscard]] inline const Quantity& getQuantityOfBids() const noexcept { return quantityOfBids_; } 	
 
-		// Deleted Constructors
+		// Public functions 
+		[[nodiscard]] const Price getBestBid() const { 	
+			if(!bids_.empty()){ 
+				return bids_.begin()->first;
+			}		
+			return 0;
+		}
+
+		[[nodiscard]] const Price getBestAsk() const { 
+			if(!asks_.empty()){
+				return asks_.begin()->first;
+			}	
+		
+			return 0;		
+		}
 
 		// No Copying 
 		OrderBook(const OrderBook& other) = delete;
@@ -113,6 +113,7 @@ class OrderBook{
 		// No Moving 
 		OrderBook(OrderBook&& other) = delete;
 		OrderBook& operator=(OrderBook&& other) = delete;
+
 };	
 
 

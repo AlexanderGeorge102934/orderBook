@@ -1,10 +1,11 @@
 #include <vector>
 #include <list> 
 #include <memory>
+#include <memory_resource>
 
 #include "Order.h"
 #include "Trade.h"
 
 using OrderPointer = std::shared_ptr<Order>;
-using OrderPointers = std::list<OrderPointer>;
-using Trades = std::vector<Trade>;
+using OrderPointers = std::pmr::list<OrderPointer>;
+using Trades = std::pmr::vector<Trade>;

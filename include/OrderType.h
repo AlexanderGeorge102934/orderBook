@@ -3,7 +3,8 @@
 
 enum class OrderType{
 	Market, 
-	Limit 
+	Limit,
+	Unknown
 };
 
 #endif

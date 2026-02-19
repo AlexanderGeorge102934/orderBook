@@ -5,11 +5,11 @@
 #include <format>
 
 
-	template <typename OrderMap>
+template <typename OrderMap>
 void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder)
 { 
 	// Go through each order at each best price and fill each order and subtract their quantity from the market order
-	for (auto it {orderMap.begin()}; it != orderMap.end() && incomingOrder->getRemainingQuantity() > 0;){
+	for (auto it {orderMap.begin()}; it != orderMap.end() && !incomingOrder->isFilled();){
 
 		Price currentPrice {it->first};
 
@@ -26,7 +26,7 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 		OrderPointers& orderList {it->second};
 
 		// Go through the list of Order Ptrs at each price in the map with the value being all the orders FIFO at that price
-		for (auto orderIt {orderList.begin()}; orderIt != orderList.end() && incomingOrder->getRemainingQuantity() > 0; ){
+		for (auto orderIt {orderList.begin()}; orderIt != orderList.end() && !incomingOrder->isFilled(); ){
 			OrderPointer& currentOrder {*orderIt}; // Current order is an order that is already in the orderbook/Current order being pointed to
 
 			Quantity quantityFilled {std::min(currentOrder->getRemainingQuantity(), incomingOrder->getRemainingQuantity())};
@@ -34,8 +34,14 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 			incomingOrder->fill(quantityFilled);
 			currentOrder->fill(quantityFilled);
 
+			statusCache_[incomingOrder->getOrderId()].filledQuantity = incomingOrder->getFilledQuantity();
+			statusCache_[currentOrder->getOrderId()].filledQuantity = currentOrder->getFilledQuantity();
+
+			statusCache_[incomingOrder->getOrderId()].remainingQuantity = incomingOrder->getRemainingQuantity();
+			statusCache_[currentOrder->getOrderId()].remainingQuantity = currentOrder->getRemainingQuantity();
+
 			// Record the trade in the order book 
-			TradeId tradeId{nextTradeId++};                 
+			TradeId tradeId{nextTradeId_++};                 
 			Trade trade
 			{
 				tradeId, 
@@ -54,10 +60,17 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 			}
 
 			if(currentOrder->isFilled()){
+				statusCache_[currentOrder->getOrderId()].state = OrderState::Filled;
+				statusCache_[currentOrder->getOrderId()].remainingQuantity = 0;
+				statusCache_[currentOrder->getOrderId()].filledQuantity = currentOrder->getFilledQuantity();
+
 				// Remove from the per-price list and also erase the order registry to avoid leaving a stale entry.
 				OrderId filledOrderId = currentOrder->getOrderId();
 				orderIt = orderList.erase(orderIt);        // erase returns iterator to next element
 				orders_.erase(filledOrderId);              // remove entry from orders_
+			}
+			else{
+				++orderIt;
 			}
 			// No need for else statement. If else then the for loop takes care of situation where incoming order got filled before current
 
@@ -66,37 +79,50 @@ void OrderBook::fillOrders(OrderMap& orderMap, const OrderPointer& incomingOrder
 		if(orderList.empty()){
 			it = orderMap.erase(it);
 		}
+		else{
+			++it;
+		}
 		// No need for else statement. If else then the for loop takes care of situation where incoming order got filled before orderlist was empty 
+	}
+
+	if(incomingOrder->isFilled()){
+		statusCache_[incomingOrder->getOrderId()].state = OrderState::Filled;
+		statusCache_[incomingOrder->getOrderId()].remainingQuantity = 0;
+		statusCache_[incomingOrder->getOrderId()].filledQuantity = incomingOrder->getFilledQuantity();
 	}
 }
 
 template<typename OrderMap>
 void OrderBook::addOrderToOrderBook(OrderMap& orderMap, const OrderPointer& incomingOrder){
+	const Price price {incomingOrder->getPrice()};
 
-	OrderPointers& orderList {orderMap[incomingOrder->getPrice()]};
-	orderList.push_back(incomingOrder);
+    auto [itMap, success] = orderMap.try_emplace(price);
+    OrderPointers& orderList {itMap->second};
 
-	const auto& it {std::prev(orderList.end())};// Points to the actual last element and not the end cuz of prev
+    orderList.push_back(incomingOrder);
 
-	OrderEntry orderEntry;
-	orderEntry.order_ = incomingOrder;
-	orderEntry.location_ = it;	
+    const auto itList = std::prev(orderList.end());
+    orders_[incomingOrder->getOrderId()] = OrderEntry{incomingOrder, itList};
 
-	orders_[incomingOrder->getOrderId()] = orderEntry;
-
-	if(incomingOrder->getSide() == Side::Buy){
-		quantityOfBids_ += incomingOrder->getRemainingQuantity(); 
-	} else{
-		quantityOfAsks_ += incomingOrder->getRemainingQuantity();
-	}
+    if (incomingOrder->getSide() == Side::Buy) {
+        quantityOfBids_ += incomingOrder->getRemainingQuantity(); 
+    } else {
+        quantityOfAsks_ += incomingOrder->getRemainingQuantity();
+    }
 }
 
-
-
-void OrderBook::processOrder(const OrderPointer& incomingOrder)
+bool OrderBook::processOrder(Order order)
 {
+	OrderId id = order.getOrderId();
+	const auto it = statusCache_.find(id);
+	if(it != statusCache_.end()){
+		// Just return false why are you trying to redo an existing order?
+		return false;
+	}
+	statusCache_.emplace(id, OrderStatus{order.getPrice(), order.getOrderType(), order.getSide(), OrderState::Processing, order.getInitialQuantity()});
+
+	auto incomingOrder {std::allocate_shared<Order>(std::pmr::polymorphic_allocator<Order>(&pool_), order)};
 	// First determine the side of the order 
-	std::lock_guard<std::mutex> lockGuard{mut_};
 	Side incomingOrderSide {incomingOrder->getSide()};
 
 	if(incomingOrderSide == Side::Buy){
@@ -109,25 +135,29 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
 
 			if( incomingOrder->getRemainingQuantity() <= quantityOfAsks){
 				fillOrders(asks_, incomingOrder);
-				return;
+				return true; // Market order filled
 			}
 
-			return;
+			statusCache_[id].state = OrderState::Expired;
+			return false; // Not enough orders to fill for market order 
 		}
 
-		const Price* bestAsk {getBestAsk()};
+		const Price bestAsk {getBestAsk()};
 
 		// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
-		if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
+		if( (quantityOfAsks == 0) || (bestAsk > incomingOrder->getPrice()) ){
 			addOrderToOrderBook(bids_, incomingOrder);
-			return;
+			//return true?
+			return true; // Limit order posted to orderbook
 		}
 
 		// Do matching logic here 
 		fillOrders(asks_, incomingOrder);
-		if(!incomingOrder->isFilled()){
+		if(!incomingOrder->isFilled()){// If not fully filled put in order book
 			addOrderToOrderBook(bids_, incomingOrder);
 		}
+
+		return true; 
 
 	}
 
@@ -142,179 +172,82 @@ void OrderBook::processOrder(const OrderPointer& incomingOrder)
 
 			if( incomingOrder->getRemainingQuantity() <= quantityOfBids){
 				fillOrders(bids_, incomingOrder);
-				return;
+				return true; // Market order filled
 			}
 
-			return;
+			statusCache_[id].state = OrderState::Expired;
+			return false; // Not enough orders to fill for market order 
 
 		}
 
-		const Price* bestBid {getBestBid()};
+		const Price bestBid {getBestBid()};
 
 		// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
-		if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
+		if( (quantityOfBids == 0) || (bestBid < incomingOrder->getPrice()) ){
 			addOrderToOrderBook(asks_, incomingOrder);
-			return;
+			return true; // limit order added to orderbook 
 		}
 
 		// Do matching logic here 
 		fillOrders(bids_, incomingOrder);
 		if(!incomingOrder->isFilled()){
 			addOrderToOrderBook(asks_, incomingOrder);
-		}    
+		}   
+		
+		return true;
 
 	}
+
+	statusCache_[id].state = OrderState::Rejected;
+	return false; 
 
 }
 
-void OrderBook::cancelOrder(const OrderId& orderId) {
-	std::lock_guard<std::mutex> lockGuard{mut_};
-	const auto it = orders_.find(orderId);
-	if (it == orders_.end()) {
-	//	Uncomment this and comment out the return value if you want to test  
-	//	throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
-		return;
-	}
+bool OrderBook::cancelOrder(const OrderId& orderId) {
+    const auto it = orders_.find(orderId);
+    if (it == orders_.end()) {
+        return false;
+    }
 
-	const OrderEntry& orderEntry {it->second};
-	const OrderPointer& orderPointer {orderEntry.order_};
-	const auto& location = orderEntry.location_;
+    const auto& [id, entry] = *it; 
+    const auto& orderPointer = entry.order_;
+    const auto price = orderPointer->getPrice();
+    const auto side = orderPointer->getSide();
+    const auto quantity = orderPointer->getRemainingQuantity();
 
-	const Side side {orderPointer->getSide()};
-	const Price price {orderPointer->getPrice()};
-	const Quantity quantity {orderPointer->getRemainingQuantity()};
+    if (side == Side::Buy) {
+        auto mapIt = bids_.find(price);
+        if (mapIt != bids_.end()) {
+            mapIt->second.erase(entry.location_);
+            quantityOfBids_ -= quantity;
+            if (mapIt->second.empty()) {
+                bids_.erase(mapIt);
+            }
+        }
+    } else if(side == Side::Sell){
+        auto mapIt = asks_.find(price);
+        if (mapIt != asks_.end()) {
+            mapIt->second.erase(entry.location_);
+            quantityOfAsks_ -= quantity;
+            if (mapIt->second.empty()) {
+                asks_.erase(mapIt);
+            }
+        }
+    }
 
-	if (side == Side::Buy) {
-		bids_[price].erase(location);
-		quantityOfBids_ -= quantity;
-		if (bids_[price].empty()) {
-			bids_.erase(price);
-		}
-	} else {
-		asks_[price].erase(location);
-		quantityOfAsks_ -= quantity;
-		if (asks_[price].empty()) {
-			asks_.erase(price);
-		}
-	}
+    // Update status cache if necessary before deleting the order
+    if (auto statusIt = statusCache_.find(orderId); statusIt != statusCache_.end()) {
+        statusIt->second.state = OrderState::Cancelled;
+    }
 
-	orders_.erase(it);
+    orders_.erase(it);
+    return true;
 }
 
-// Helper for Modify Order
-void OrderBook::processOrderPrivate(const OrderPointer& incomingOrder)
-{
-	// First determine the side of the order 
-	Side incomingOrderSide {incomingOrder->getSide()};
-
-	if(incomingOrderSide == Side::Buy){
-
-		Quantity quantityOfAsks {getQuantityOfAsks()};
-
-		// If market order check to see if the quantity can be filled or FOK 
-		// Inherintly checks that the orderbook isn't empty  
-		if(incomingOrder->getOrderType() == OrderType::Market){
-
-			if( incomingOrder->getRemainingQuantity() <= quantityOfAsks){
-				fillOrders(asks_, incomingOrder);
-				return;
-			}
-
-			return;
-		}
-
-		const Price* bestAsk {getBestAsk()};
-
-		// If the order book for asks is empty or the order is unable to match with best sell then add to orderbook	
-		if( (quantityOfAsks == 0) || (*bestAsk > incomingOrder->getPrice()) ){
-			addOrderToOrderBook(bids_, incomingOrder);
-			return;
-		}
-
-		// Do matching logic here 
-		fillOrders(asks_, incomingOrder);
-		if(!incomingOrder->isFilled()){
-			addOrderToOrderBook(bids_, incomingOrder);
-		}
-
-	}
-
-
-	if(incomingOrderSide == Side::Sell){
-
-		Quantity quantityOfBids {getQuantityOfBids()};
-
-		// If the order type is market check to see if total quantity can be filled otherwise FOK
-		// Inherintly checks that the order book isn't empty 
-		if(incomingOrder->getOrderType() == OrderType::Market){
-
-			if( incomingOrder->getRemainingQuantity() <= quantityOfBids){
-				fillOrders(bids_, incomingOrder);
-				return;
-			}
-
-			return;
-
-		}
-
-		const Price* bestBid {getBestBid()};
-
-		// If the orderbook is empty or the order is unable to match with best sell then add to orderbook	
-		if( (quantityOfBids == 0) || (*bestBid < incomingOrder->getPrice()) ){
-			addOrderToOrderBook(asks_, incomingOrder);
-			return;
-		}
-
-		// Do matching logic here 
-		fillOrders(bids_, incomingOrder);
-		if(!incomingOrder->isFilled()){
-			addOrderToOrderBook(asks_, incomingOrder);
-		}    
-
-	}
-
-}
-
-// Helper for Modify Order
-void OrderBook::cancelOrderPrivate(const OrderId& orderId) {
-	const auto it = orders_.find(orderId);
-	if (it == orders_.end()) {
-		return;
-	}
-
-	const OrderEntry& orderEntry {it->second};
-	const OrderPointer& orderPointer {orderEntry.order_};
-	const auto& location = orderEntry.location_;
-
-	const Side side {orderPointer->getSide()};
-	const Price price {orderPointer->getPrice()};
-	const Quantity quantity {orderPointer->getRemainingQuantity()};
-
-	if (side == Side::Buy) {
-		bids_[price].erase(location);
-		quantityOfBids_ -= quantity;
-		if (bids_[price].empty()) {
-			bids_.erase(price);
-		}
-	} else {
-		asks_[price].erase(location);
-		quantityOfAsks_ -= quantity;
-		if (asks_[price].empty()) {
-			asks_.erase(price);
-		}
-	}
-
-	orders_.erase(it);
-}
-
-
-void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price){
-	std::lock_guard<std::mutex> lockGuard{mut_};
+bool OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, const Price& price){
 	const auto it = orders_.find(orderId);
 	if(it == orders_.end()){
-	//	Uncomment this and comment out the return value if you want to test  
-	//	throw std::runtime_error(std::format("Order ({}) doesn't exist", orderId));
-		return;
+		return false;
 	}
 
 	OrderEntry orderEntry {it->second};
@@ -324,15 +257,28 @@ void OrderBook::modifyOrder(const OrderId& orderId, const Quantity& quantity, co
 	Side side{orderPointer->getSide()};
 	OrderType orderType {orderPointer->getOrderType()};
 
-	cancelOrderPrivate(orderId);
+	//If false return false 
+	if(!cancelOrder(orderId)){
+		return false;
+	}
 
-	OrderPointer newOrderPointer {std::make_shared<Order>(side, price, orderId, orderType, quantity, quantity)};
+	statusCache_.erase(orderId); // Tbh just for simplicity I'm keeping the same id 
 
-	processOrderPrivate(newOrderPointer);
+	Order newOrder {Order(side, price, orderId, orderType, quantity, quantity)};
 
+	if(!processOrder(newOrder)){
+		return false;  
+	}
 
+	return true;
 }
 
+const OrderBook::OrderStatus OrderBook::reviewOrderStatus(const OrderId& orderId) const{
+	auto it{statusCache_.find(orderId)};
 
+	if(it != statusCache_.end()){
+		return it->second;
+	}
 
-
+	return {0, OrderType::Unknown, Side::Unknown, OrderState::Rejected, 0, 0};
+}

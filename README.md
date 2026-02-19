@@ -5,7 +5,7 @@
 Implementation of an order book I made that supports both **Market Orders** and **Limit Orders**. Orders are pre-processed before insertion (Only if Limit), and any remaining limit orders are stored in the order book for future matching.
 
 > **Inspiration:**
-> This project is inspired by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master)
+> This project takes structural inspiration by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master) while implementing an original order book logic and multithreaded design. 
 
 ---
 
@@ -27,65 +27,99 @@ To build and run this project:
 1. Install Cmake (Minimum Ver. 3.14)
 2. Clone the [GoogleTest repository](https://github.com/google/googletest).
 3. Place the repository inside your project directory (e.g., `external/googletests`).
+4. Download the [Boost Library ver 1.89.0](https://www.boost.org/) and place only the header-only subset folder inside the external folder as well labeled "boost"
 
 > ⚠️ If you change the folder location, make sure to update the path in the root `CMakeLists.txt` using `add_subdirectory`.
 
 ---
+## Technical Stack
 
-## Tools Used
+### **Libraries (Dependencies)**
 
-* **Profiler:** perf 6.8.12
-* **Virtual Machine:** Virtual Box 7.2.2 (Used because I don't have Linux OS to use perf)
-* **Compiler:** GNU Compiler Collection 
+* **Boost (Header-Only):** For boost.asio and spsc_queue 
+* **GoogleTest:** Framework for unit testing.
+* **WinSock2 / MSWSock:** (Windows only) Handle network socket logic for the trading system.
+
+### **Tools Used**
+
+* **Compiler:** GCC 
+* **Build System:** CMake (Minimun Ver. 3.14)
+* **Profiler:** `perf` (Linux 6.8.12)
+* **Virtualization:** VirtualBox 7.2.2 (used only to run `perf` in a Linux environment since I do not have a linux os)
 
 ---
 ## Build Instructions
 
-1. Go to your project root directory.
+1. **Open your terminal** in the project root directory.
+2. **Generate and Build** using one of the following configurations:
 
-2. Create your build files:
+### **Option A: Production Build **
 
-   ```bash
-   cmake -S . -B build
-   ```
+```bash
+# Generate
+cmake -S . -B build-prod -DBUILD_TESTING_SUITE=OFF -DCMAKE_BUILD_TYPE=Release
 
-   > **For profiling** 
-   ```bash
-   cmake -S . -B build-perf -DCMAKE_BUILD_TYPE=RelWithDebInfo
-   ```
+# Build
+cmake --build build-prod
 
-   > **Note:**
-   > On Windows using MinGW, CMake may default to `nmake`. To avoid this:
+```
 
+### **Option B: Development & Testing Build**
 
-   ```bash
-   cmake -S . -B build -G "MinGW Makefiles"
-   ```
-   > *Credit to [this Stack Overflow post](https://stackoverflow.com/questions/69338088/error-while-configuring-cmake-project-running-nmake-failed).*
+Use this if you just want to run unit tests. Includes debug symbols.
 
+```bash
+# Generate
+cmake -S . -B build-test -DBUILD_TESTING_SUITE=ON -DCMAKE_BUILD_TYPE=Debug
 
-3. Build the project:
+# Build
+cmake --build build-test
 
-   ```bash
-   cmake --build build
-   ```
+```
+
+### **Option C: Profiling Build (for `perf`)**
+
+Use this for performance analysis. It runs at production speed but keeps function names visible for the profiler.
+
+```bash
+# Generate
+cmake -S . -B build-perf -DBUILD_TESTING_SUITE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+# Build
+cmake --build build-perf
+
+```
+
+---
+
+### **⚠️ Windows (MinGW) Users**
+
+If you are on Windows and using MinGW, CMake might default to `nmake`, which will cause an error. To get around this I fixed it by adding `-G "MinGW Makefiles"` to the generation command.
+Also be sure to remove any prior build folders.
+
+**Example for Testing Build on Windows:**
+
+```bash
+cmake -S . -B build-test -G "MinGW Makefiles" -DBUILD_TESTING_SUITE=ON -DCMAKE_BUILD_TYPE=Debug
+
+```
+
+> *Credit to [this Stack Overflow post](https://stackoverflow.com/questions/69338088/error-while-configuring-cmake-project-running-nmake-failed) for the fix.*
 
 ---
 
 ## Running Tests
 
-⚠️ Before building and executing the test file (TestOrderBook.exe), you must move the "Simple Getters" member functions labeled in the OrderBook class from private to public to test the class AND go to projectdir/tests and uncomment the last portion of the CMakeLists.txt file AND follow the instructions of what to comment out in projectdir/src/OrderBook.cpp 
+If you built using **Option B** or **C**, your test executables will be located in:
+`projectdir/build-<name>/tests/`
 
-After building:
+You can run them individually (e.g., `./TestOrderBook`) or run all tests at once using:
 
-* Navigate to `projectdir/build/tests`.
-* You will find the following test executables:
+```bash
+cd build-test
+ctest
 
-  * `TestOrder.exe`
-  * `TestOrderBook.exe`
-  * `TestTrade.exe`
-
-You can run these individually. Test source files are located in `projectdir/tests`.
+```
 
 ---
 
@@ -97,18 +131,15 @@ The main executable is located in:
 projectdir/build/src/main.exe
 ```
 
-This program uses `orderbook.cpp` and other components to:
-
-* Read orders from a text file
-* Validate the orders
-* Process them in a multithreaded environment
-* **Note** whenever you rerun the main executable be sure to delete the output.txt otherwise you won't see the output of the trades when you make changes to data.txt
 ---
 
 ## Project Structure
 
 ```
 projectdir/
+├── include/
+│   ├── OrderBook.h
+│   └── ...
 ├── src/
 │   ├── main.cpp
 │   └── ...
@@ -117,6 +148,7 @@ projectdir/
 │   └── ...
 ├── external/
 │   └── googletests/
+│   └── boost/
 ├── build/
 ├── CMakeLists.txt
 └── README.md

@@ -7,23 +7,18 @@
 #include <atomic> 
 #include <thread>
 
-#include "OrderBook.cpp"
+#include "TradingSystem.h"
 
-int main(){
-	OrderBook orderBook{};
-	uint64_t nextOrderId = 1;
+int main() {
+    try {
+        TradingSystem tradingSystem{};
+        std::cout << "Trading System Online. Listening on Port 1030..." << std::endl;
+        tradingSystem.startServer();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Critical System Failure: " << e.what() << std::endl;
+        return 1;
+    }
 
-	for(int i{}; i < 1'000'000'000; ++i){
-		Side side = (i % 2 == 0) ? Side::Buy : Side::Sell;
-		uint32_t price = 100 + (i %50);
-		uint32_t qty = 10 + (i % 100);
-		uint64_t orderId = nextOrderId++;
-
-
-	auto order = std::make_shared<Order>(side, price, orderId, OrderType::Limit, qty, qty);
-
-	orderBook.processOrder(order);
-
-	}
-	return 0;
+    return 0;
 }
