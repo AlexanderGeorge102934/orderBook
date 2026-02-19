@@ -87,6 +87,11 @@ void TradingSystem::handleSequencing(std::string_view message) {
 // [NOTE]: Later down the road I could remove this function and just simply call process order directly but for better 
 //         readability this will do for now  
 void TradingSystem::handleMatching(Order order){ 
-    orderBook_.processOrder(order);
+    //orderBook_.processOrder(order);
     // submit orderbooks trade to handle logging through queue 
+
+    if (orderBook_.processOrder(order)) {
+        // Simple way: display after every successfully processed order
+        orderBook_.display();
+    }
 }
