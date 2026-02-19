@@ -132,6 +132,15 @@ The main executable is located in:
 projectdir/build/src/main.exe
 ```
 
+Simply run the executable and after connecting to the socket of whatever computer is hosting the executable send commands like 
+
+```
+BUY LIMIT 100 50 
+```
+or 
+```
+SELL MARKET 100 50 
+```
 ---
 
 ## Project Structure
