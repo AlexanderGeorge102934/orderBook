@@ -17,5 +17,3 @@ target_link_libraries(main PRIVATE tradingsystem orderbook)
 if(WIN32)
     target_link_libraries(main PRIVATE ws2_32 mswsock)
 endif()
-
-#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/data.txt ${CMAKE_CURRENT_BINARY_DIR}/data.txt COPYONLY)
