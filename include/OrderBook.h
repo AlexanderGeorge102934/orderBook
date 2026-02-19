@@ -106,6 +106,8 @@ class OrderBook{
 			return 0;		
 		}
 
+		void display(size_t depth = 5) const; // This method is unpractical but it helps to visualize so I'll keep it 
+
 		// No Copying 
 		OrderBook(const OrderBook& other) = delete;
 		OrderBook& operator=(const OrderBook& other) = delete;

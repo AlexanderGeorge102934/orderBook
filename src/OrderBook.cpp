@@ -282,3 +282,47 @@ const OrderBook::OrderStatus OrderBook::reviewOrderStatus(const OrderId& orderId
 
 	return {0, OrderType::Unknown, Side::Unknown, OrderState::Rejected, 0, 0};
 }
+
+void OrderBook::display(size_t depth) const{ // Used gemini for this (too lazy to write my own display function)
+	// 1. Safe Spread Calculation
+	Price bestAsk = getBestAsk();
+	Price bestBid = getBestBid();
+	Price spread = (bestAsk == 0 || bestBid == 0) ? 0 : (bestAsk - bestBid);
+
+	std::cout << "\n====================================\n";
+	std::cout << "  ORDER BOOK (Top " << depth << " Levels)\n";
+	std::cout << "====================================\n";
+	std::cout << std::format("{:>10} | {:>10} | {:>10}\n", "Side", "Price", "Qty");
+	std::cout << "------------------------------------\n";
+
+	// 2. Display Asks (Top N cheapest sellers)
+	// We want the 5 prices closest to the spread.
+	// Since asks_ is sorted low-to-high, we take the first N elements and print in reverse
+	size_t askCount = 0;
+	std::vector<std::string> askLines;
+	for (auto it = asks_.begin(); it != asks_.end() && askCount < depth; ++it, ++askCount)
+	{
+		Quantity totalQty = 0;
+		for (const auto &order : it->second)
+			totalQty += order->getRemainingQuantity();
+		askLines.push_back(std::format("{:>10} | {:>10} | {:>10}", "ASK", it->first, totalQty));
+	}
+	// Print them high-to-low so the best ask is right above the spread
+	for (auto it = askLines.rbegin(); it != askLines.rend(); ++it)
+	{
+		std::cout << *it << "\n";
+	}
+
+	std::cout << "---------- SPREAD: " << spread << " ----------\n";
+
+	// 3. Display Bids (Top N highest buyers)
+	size_t bidCount = 0;
+	for (auto it = bids_.begin(); it != bids_.end() && bidCount < depth; ++it, ++bidCount)
+	{
+		Quantity totalQty = 0;
+		for (const auto &order : it->second)
+			totalQty += order->getRemainingQuantity();
+		std::cout << std::format("{:>10} | {:>10} | {:>10}\n", "BID", it->first, totalQty);
+	}
+	std::cout << "====================================\n\n";
+}

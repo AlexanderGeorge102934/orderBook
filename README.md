@@ -156,3 +156,34 @@ projectdir/
 ```
 
 ---
+
+## Side Note
+
+I included a `display()` function tool inside my orderbook class. This is to help visually see what's happening but this is NOT practical. I don't plan on creating an optimal function to display the current state of the orderbook but I also want to at least allow people curious enough to run my code to visually see what's happening. The display function was added at the very end of this project. You can simply remove the only reference of it in the `src/TradingSystem.cpp` file if you want and it will function with the original purpose, mentioned at the beginning, in mind.
+
+## Final Thoughts
+
+Ultimately, this project was mainly just a deep dive into a variety of topics rather than building a commercial grade orderbook. I'm not an expert in HFT.
+
+### Key Takeaways
+
+Key Takeaways from this project for me were understanding:
+
+* **System design choices**
+* **Data structures**
+* **Multithreading**
+* **Networking**
+* **The build lifecycle**
+* **Sampling profilers**
+* **Unit testing**
+* **RAII**
+* **Memory optimization**
+* **Seperation of concerns**
+* **Self documenting and clean code**
+* **The boost library**
+
+This was a project I have been working on for quite some time and I'm happy to have done it. No one needs to go to this extent when building a project to learn something but if you want to learn from any of the topics that I mentioned in the key takeaways I would highly recommend it.
+
+---
+
+**Is there anything else I can help you with to wrap up this project?**
