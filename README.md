@@ -2,22 +2,23 @@
 
 # Order Book 
 
-Implementation of an order book I made that supports both **Market Orders** and **Limit Orders**. Orders are pre-processed before insertion (Only if Limit), and any remaining limit orders are stored in the order book for future matching.
+The purpose of this project is to implement a high-performance C++ trading order book supporting Market and Limit orders. It features multithreaded order processing with a custom thread pool, comprehensive unit tests with GoogleTest, and uses Boost for networking and lock-free queues.
 
 > **Inspiration:**
-> This project takes structural inspiration by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master) while implementing an original order book logic and multithreaded design. 
+> This project was inspired by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master)
 
 ---
 
 ## Features
 
-* Supports **Market** and **Limit** orders.
-  * **Limit Orders:** Attempt to fill as much as possible. Any remaining unfilled portion is added to the order book.
-  * **Market Orders:** Treated as *fill or kill* — they must be completely filled immediately or they are discarded.
-* Pre-processes and matches orders before inserting into the book.
-* Stores unmatched **Limit** orders in an internal order book.
-* Supports multithreading 
-* Unit tests included for core components.
+* **Market and Limit Orders**
+  * **Limit Orders:** Attempt to fill as much as possible. Any remaining unfilled portion is stored in the order book for future matching.
+  * **Market Orders:** Treated as *fill or kill* — must be completely filled immediately or are discarded.
+* **Order Matching Engine:** Pre-processes and matches incoming orders against existing orders before insertion.
+* **Internal Order Book:** Stores unmatched Limit orders organized by price level using data structures (maps with linked lists).
+* **Multithreaded Processing:** Custom thread pool that utilizes available hardware threads with thread-safe operations.
+* **Comprehensive Testing:** Unit tests using GoogleTest for core components including Order, OrderBook, and Trade logic.
+* **Performance Profiling:** Multiple build configurations (Debug, Release, and profiling builds) with support for `perf` analysis.
 
 ---
 
