@@ -30,7 +30,7 @@ To build and run this project:
 3. Place the repository inside your project directory (e.g., `external/googletests`).
 4. Download the [Boost Library ver 1.89.0](https://www.boost.org/) and place only the header-only subset folder inside the external folder as well labeled "boost"
 
-> ⚠️ If you change the folder location, make sure to update the path in the root `CMakeLists.txt` using `add_subdirectory`.
+> If you change the folder location, make sure to update the path in the root `CMakeLists.txt` using `add_subdirectory`.
 
 ---
 ## Technical Stack
@@ -93,7 +93,7 @@ cmake --build build-perf
 
 ---
 
-### **⚠️ Windows (MinGW) Users**
+### **Windows (MinGW) Users**
 
 If you are on Windows and using MinGW, CMake might default to `nmake`, which will cause an error. To get around this I fixed it by adding `-G "MinGW Makefiles"` to the generation command.
 Also be sure to remove any prior build folders.
