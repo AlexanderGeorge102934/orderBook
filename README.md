@@ -2,7 +2,7 @@
 
 # Order Book 
 
-The purpose of this project is to implement a high-performance C++ trading order book supporting Market and Limit orders. It features multithreaded order processing with a custom thread pool, comprehensive unit tests with GoogleTest, and uses Boost for networking and lock-free queues.
+The purpose of this project is to implement a C++ trading order book supporting Market and Limit orders. It features multithreaded order processing with a custom thread pool, comprehensive unit tests with GoogleTest, and uses Boost for networking and lock-free queues.
 
 > **Inspiration:**
 > This project was inspired by [Tzadiko's Orderbook](https://github.com/Tzadiko/Orderbook/tree/master)
