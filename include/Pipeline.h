@@ -31,6 +31,12 @@ class Pipeline {
                     std::this_thread::yield();
                 }
             }
+
+            // Process remaining tasks after done_ is set
+            std::function<void()> task;
+            while (queue.pop(task)){
+                task();
+            }
         }
 
     protected:

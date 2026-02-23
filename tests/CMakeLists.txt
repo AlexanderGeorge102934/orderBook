@@ -38,6 +38,36 @@ target_link_libraries(TestOrderBook
     gtest_main
 )
 
-
-
 gtest_discover_tests(TestOrderBook)
+
+# Build for testing Pipeline
+
+add_executable(TestPipeline
+    TestPipeline.cpp
+)
+
+target_link_libraries(TestPipeline
+    gtest
+    gtest_main
+)
+
+gtest_discover_tests(TestPipeline)
+
+# Build for testing Trading System
+add_executable(TestTradingSystem
+    TestTradingSystem.cpp
+)
+
+# Link the standard Google Test libraries first
+target_link_libraries(TestTradingSystem PRIVATE
+    gtest
+    gtest_main
+)
+
+# Now check for Windows and link the socket libraries separately
+if(WIN32)
+    target_link_libraries(TestTradingSystem PRIVATE ws2_32 mswsock)
+endif()
+
+gtest_discover_tests(TestTradingSystem)
+
