@@ -80,7 +80,7 @@ cmake --build build-test
 
 ### **Option C: Profiling Build (for `perf`)**
 
-Use this for performance analysis. It runs at production speed but keeps function names visible for the profiler.
+Use this for performance analysis. 
 
 ```bash
 # Generate
